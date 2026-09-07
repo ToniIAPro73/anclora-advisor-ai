@@ -24,9 +24,18 @@ export async function POST(request: NextRequest) {
   if (!user) {
     return NextResponse.json({ success: false, error: "Invalid access token." }, { status: 401 });
   }
-  const appUser = await syncAppUserRecord(user);
+  let appUser = { id: user.id, email: user.email ?? "", role: "user" };
+  if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    try {
+      appUser = await syncAppUserRecord(user);
+    } catch (syncErr) {
+      console.warn("[session] Failed to sync app user record:", syncErr);
+    }
+  } else {
+    console.warn("[session] Warning: SUPABASE_SERVICE_ROLE_KEY is not set. User sync to public.users skipped.");
+  }
 
-  const response = NextResponse.json({ success: true });
+  const response = NextResponse.json({ success: true, user: appUser });
   response.cookies.set(SESSION_COOKIE_NAME, parsed.data.accessToken, {
     httpOnly: true,
     sameSite: "lax",
@@ -35,17 +44,19 @@ export async function POST(request: NextRequest) {
     maxAge: 60 * 60 * 24 * 7,
   });
   try {
-    await createAuditLog(createServiceSupabaseClient(), {
-      userId: appUser.id,
-      domain: "admin_rag",
-      entityType: "auth_session",
-      entityId: appUser.id,
-      action: "session_started",
-      summary: `Sesion iniciada para ${appUser.email}`,
-      metadata: {
-        role: appUser.role,
-      },
-    });
+    if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      await createAuditLog(createServiceSupabaseClient(), {
+        userId: appUser.id,
+        domain: "admin_rag",
+        entityType: "auth_session",
+        entityId: appUser.id,
+        action: "session_started",
+        summary: `Sesion iniciada para ${appUser.email}`,
+        metadata: {
+          role: appUser.role,
+        },
+      });
+    }
   } catch {
     // Session creation must not fail because of audit logging.
   }

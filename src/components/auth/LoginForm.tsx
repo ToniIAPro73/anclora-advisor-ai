@@ -6,6 +6,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAppPreferences } from "@/components/providers/AppPreferencesProvider";
 import { uiText } from "@/lib/i18n/ui";
+import { isGithubAuthEnabled, isGoogleAuthEnabled, signInWithOAuth } from "@/lib/auth/supabase-oauth";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type AuthMode = "login" | "signup" | "forgot" | "reset";
@@ -15,6 +16,8 @@ interface LoginFormProps {
 }
 
 export function LoginForm({ nextPath }: LoginFormProps) {
+  const googleAuthEnabled = isGoogleAuthEnabled();
+  const githubAuthEnabled = isGithubAuthEnabled();
   const router = useRouter();
   const { resolvedTheme, locale } = useAppPreferences();
   const ui = (key: string) => uiText(locale, key);
@@ -68,6 +71,23 @@ export function LoginForm({ nextPath }: LoginFormProps) {
     });
     if (!response.ok) {
       throw new Error("No se pudo crear la sesión de servidor.");
+    }
+  };
+
+  const handleOAuth = async (provider: "google" | "github") => {
+    setLoading(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      const redirectTo = `${origin}/auth/callback?next=${encodeURIComponent(nextPath || "/dashboard")}`;
+      const { error: oauthError } = await signInWithOAuth(provider, redirectTo);
+      if (oauthError) {
+        throw new Error(oauthError.message);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al iniciar sesión con proveedor social.");
+      setLoading(false);
     }
   };
 
@@ -390,7 +410,7 @@ export function LoginForm({ nextPath }: LoginFormProps) {
               </div>
             )}
 
-            {/* Social login — disabled (OAuth not configured) */}
+            {/* Social login */}
             <div style={{ padding: '12px 24px 0' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 8px' }}>
                 <div style={{ flex: 1, height: 1, background: 'var(--advisor-border)' }} />
@@ -400,8 +420,52 @@ export function LoginForm({ nextPath }: LoginFormProps) {
                 <div style={{ flex: 1, height: 1, background: 'var(--advisor-border)' }} />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <button disabled style={{ height: 36, border: '1px solid var(--advisor-border)', borderRadius: 10, fontSize: 12, fontFamily: 'inherit', color: 'var(--text-secondary)', opacity: 0.5, cursor: 'not-allowed', background: 'transparent' }} title={ui("auth.socialComingSoon")}>Google</button>
-                <button disabled style={{ height: 36, border: '1px solid var(--advisor-border)', borderRadius: 10, fontSize: 12, fontFamily: 'inherit', color: 'var(--text-secondary)', opacity: 0.5, cursor: 'not-allowed', background: 'transparent' }} title={ui("auth.socialComingSoon")}>GitHub</button>
+                <button
+                  type="button"
+                  disabled={!googleAuthEnabled || loading}
+                  onClick={googleAuthEnabled ? () => handleOAuth("google") : undefined}
+                  style={{
+                    height: 36,
+                    border: '1px solid var(--advisor-border)',
+                    borderRadius: 10,
+                    fontSize: 12,
+                    fontFamily: 'inherit',
+                    color: isLight ? '#162944' : '#f3f7fd',
+                    opacity: googleAuthEnabled ? 1 : 0.5,
+                    cursor: googleAuthEnabled ? 'pointer' : 'not-allowed',
+                    background: 'transparent',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                  }}
+                  title={googleAuthEnabled ? "Iniciar sesión con Google" : ui("auth.socialComingSoon")}
+                >
+                  Google
+                </button>
+                <button
+                  type="button"
+                  disabled={!githubAuthEnabled || loading}
+                  onClick={githubAuthEnabled ? () => handleOAuth("github") : undefined}
+                  style={{
+                    height: 36,
+                    border: '1px solid var(--advisor-border)',
+                    borderRadius: 10,
+                    fontSize: 12,
+                    fontFamily: 'inherit',
+                    color: isLight ? '#162944' : '#f3f7fd',
+                    opacity: githubAuthEnabled ? 1 : 0.5,
+                    cursor: githubAuthEnabled ? 'pointer' : 'not-allowed',
+                    background: 'transparent',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                  }}
+                  title={githubAuthEnabled ? "Iniciar sesión con GitHub" : ui("auth.socialComingSoon")}
+                >
+                  GitHub
+                </button>
               </div>
             </div>
 
