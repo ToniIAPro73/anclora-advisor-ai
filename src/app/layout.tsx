@@ -5,6 +5,7 @@ import { AppPreferencesProvider } from "@/components/providers/AppPreferencesPro
 import { AppPreferencesScript } from "@/components/providers/AppPreferencesScript";
 import { CookieConsent } from "@/components/legal/CookieConsent";
 import { ADVISOR_BRAND } from "@/lib/advisor-brand";
+import { versionedPublicAsset } from "@/lib/branding/icon-metadata";
 import './globals.css';
 
 // ANCLORA_BRANDING_TYPOGRAPHY (Internas): Inter para display/body, JetBrains Mono para monospace.
@@ -25,12 +26,12 @@ export const metadata: Metadata = {
   description: ADVISOR_BRAND.description,
   icons: {
     icon: [
-      { url: ADVISOR_BRAND.faviconPath, sizes: 'any' },
-      { url: ADVISOR_BRAND.faviconPng32, type: 'image/png', sizes: '32x32' },
-      { url: ADVISOR_BRAND.faviconPng192, type: 'image/png', sizes: '192x192' },
+      { url: versionedPublicAsset(ADVISOR_BRAND.faviconPath), sizes: 'any' },
+      { url: versionedPublicAsset(ADVISOR_BRAND.faviconPng32), type: 'image/png', sizes: '32x32' },
+      { url: versionedPublicAsset(ADVISOR_BRAND.faviconPng192), type: 'image/png', sizes: '192x192' },
     ],
-    apple: [{ url: ADVISOR_BRAND.appleTouchIcon, sizes: '180x180', type: 'image/png' }],
-    shortcut: [ADVISOR_BRAND.faviconPath],
+    apple: [{ url: versionedPublicAsset(ADVISOR_BRAND.appleTouchIcon), sizes: '180x180', type: 'image/png' }],
+    shortcut: [versionedPublicAsset(ADVISOR_BRAND.faviconPath)],
   },
 };
 
