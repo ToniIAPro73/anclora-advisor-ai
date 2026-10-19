@@ -1,4 +1,4 @@
-import { Inter, JetBrains_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import type { Metadata } from 'next';
 import type { ReactNode } from "react";
 import { AppPreferencesProvider } from "@/components/providers/AppPreferencesProvider";
@@ -9,16 +9,19 @@ import { versionedPublicAsset } from "@/lib/branding/icon-metadata";
 import './globals.css';
 
 // ANCLORA_BRANDING_TYPOGRAPHY (Internas): Inter para display/body, JetBrains Mono para monospace.
-const sansFont = Inter({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+// Fuentes autoalojadas (subset latin): el build no depende de la red de Google Fonts.
+const sansFont = localFont({
+  src: "./fonts/Inter-latin.woff2",
+  weight: "400 700",
   variable: "--font-sans",
+  display: "swap",
 });
 
-const monoFont = JetBrains_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500"],
+const monoFont = localFont({
+  src: "./fonts/JetBrainsMono-latin.woff2",
+  weight: "400 500",
   variable: "--font-mono",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
