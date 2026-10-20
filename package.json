@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Asesoría fiscal, laboral y mercado para autónomos",
   "scripts": {
-    "dev": "next dev",
+    "dev": "node ../anclora-infrastructure/scripts/free-port.mjs && next dev -p 3001",
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --ext .ts,.tsx",
