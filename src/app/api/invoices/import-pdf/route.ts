@@ -18,7 +18,10 @@ import {
 } from "@/lib/invoices/service";
 import { resolveLocale, t } from "@/lib/i18n/messages";
 import { getRequestId, log } from "@/lib/observability/logger";
-import { createServiceSupabaseClient } from "@/lib/supabase/server-admin";
+import {
+  createServiceSupabaseClient,
+  createSupabaseStorageAdminClient,
+} from "@/lib/supabase/server-admin";
 import { createUserScopedSupabaseClient } from "@/lib/supabase/server-user";
 
 async function getAuthenticatedContext() {
@@ -75,7 +78,8 @@ export async function POST(request: NextRequest) {
 
     const storagePath = buildInvoiceImportStoragePath(auth.userId, file.name);
     const admin = createServiceSupabaseClient();
-    const { error: uploadError } = await admin.storage.from(INVOICE_IMPORTS_BUCKET).upload(storagePath, buffer, {
+    const storage = createSupabaseStorageAdminClient();
+    const { error: uploadError } = await storage.storage.from(INVOICE_IMPORTS_BUCKET).upload(storagePath, buffer, {
       contentType: file.type || "application/octet-stream",
       upsert: false,
     });
@@ -111,7 +115,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error || !data) {
-      await admin.storage.from(INVOICE_IMPORTS_BUCKET).remove([storagePath]);
+      await storage.storage.from(INVOICE_IMPORTS_BUCKET).remove([storagePath]);
       throw new Error(error?.message ?? "INVOICE_IMPORT_INSERT_FAILED");
     }
 

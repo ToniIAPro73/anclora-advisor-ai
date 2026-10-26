@@ -1,8 +1,8 @@
-import { createServiceSupabaseClient } from "../src/lib/supabase/server-admin";
+import { createSupabaseStorageAdminClient } from "../src/lib/supabase/server-admin";
 import { INVOICE_IMPORTS_BUCKET } from "../src/lib/invoices/imports";
 
 async function main(): Promise<void> {
-  const supabase = createServiceSupabaseClient();
+  const supabase = createSupabaseStorageAdminClient();
   const bucketConfig = {
     public: false,
     fileSizeLimit: 10 * 1024 * 1024,

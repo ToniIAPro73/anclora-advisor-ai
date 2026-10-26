@@ -1,8 +1,8 @@
-import { createServiceSupabaseClient } from "../src/lib/supabase/server-admin";
+import { createSupabaseStorageAdminClient } from "../src/lib/supabase/server-admin";
 import { LABOR_EVIDENCE_BUCKET } from "../src/lib/labor/evidence";
 
 async function main(): Promise<void> {
-  const supabase = createServiceSupabaseClient();
+  const supabase = createSupabaseStorageAdminClient();
   const { data: buckets, error: listError } = await supabase.storage.listBuckets();
   if (listError) {
     throw new Error(listError.message);

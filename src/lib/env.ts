@@ -43,3 +43,26 @@ export function getSupabaseAnonKey(): string {
   // SUPABASE_KEY es alias server-side de la anon key si se define
   return process.env.SUPABASE_KEY ?? getPublicSupabaseAnonKey();
 }
+
+export type DatabaseProvider = "supabase" | "neon";
+
+export function getDatabaseProvider(): DatabaseProvider {
+  const value = process.env.DATABASE_PROVIDER ?? "supabase";
+  if (value !== "supabase" && value !== "neon") {
+    throw new Error(`Unsupported DATABASE_PROVIDER: ${value}`);
+  }
+  return value;
+}
+
+/** REST-compatible database endpoint; Supabase remains the auth/storage endpoint. */
+export function getDatabaseApiUrl(): string {
+  if (getDatabaseProvider() === "supabase") {
+    return getSupabaseUrl();
+  }
+
+  const value = process.env.NEON_DATA_API_URL;
+  if (!value) {
+    throw new Error("DATABASE_PROVIDER=neon requires NEON_DATA_API_URL");
+  }
+  return value;
+}

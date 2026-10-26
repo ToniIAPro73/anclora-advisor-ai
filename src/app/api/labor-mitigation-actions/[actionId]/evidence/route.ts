@@ -11,7 +11,10 @@ import {
   extractStoragePathFromEvidenceUrl,
   LABOR_EVIDENCE_BUCKET,
 } from "@/lib/labor/evidence";
-import { createServiceSupabaseClient } from "@/lib/supabase/server-admin";
+import {
+  createServiceSupabaseClient,
+  createSupabaseStorageAdminClient,
+} from "@/lib/supabase/server-admin";
 import { createUserScopedSupabaseClient } from "@/lib/supabase/server-user";
 
 type RouteContext = {
@@ -63,8 +66,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
   try {
     await loadUserAction(auth.accessToken, actionId);
-    const admin = createServiceSupabaseClient();
-    const { data, error } = await admin.storage.from(LABOR_EVIDENCE_BUCKET).createSignedUrl(storagePath, 60);
+    const storage = createSupabaseStorageAdminClient();
+    const { data, error } = await storage.storage.from(LABOR_EVIDENCE_BUCKET).createSignedUrl(storagePath, 60);
     if (error || !data?.signedUrl) {
       throw new Error(error?.message ?? "SIGNED_URL_FAILED");
     }
@@ -100,8 +103,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const storagePath = buildLaborEvidencePath(auth.userId, actionId, file.name);
     const arrayBuffer = await file.arrayBuffer();
     const admin = createServiceSupabaseClient();
+    const storage = createSupabaseStorageAdminClient();
 
-    const { error: uploadError } = await admin.storage.from(LABOR_EVIDENCE_BUCKET).upload(storagePath, arrayBuffer, {
+    const { error: uploadError } = await storage.storage.from(LABOR_EVIDENCE_BUCKET).upload(storagePath, arrayBuffer, {
       contentType: file.type || "application/octet-stream",
       upsert: false,
     });
@@ -191,7 +195,8 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     });
 
     const admin = createServiceSupabaseClient();
-    await admin.storage.from(LABOR_EVIDENCE_BUCKET).remove([storagePath]);
+    const storage = createSupabaseStorageAdminClient();
+    await storage.storage.from(LABOR_EVIDENCE_BUCKET).remove([storagePath]);
 
     const userScoped = createUserScopedSupabaseClient(auth.accessToken);
     const { data, error } = await userScoped
