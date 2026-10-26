@@ -10,11 +10,18 @@ function getPrivateKey() {
     throw new Error("Missing required environment variable: NEON_SERVICE_JWT_PRIVATE_KEY");
   }
 
-  return createPrivateKey(value.replace(/\\n/g, "\n"));
+  const key = createPrivateKey(value.replace(/\\n/g, "\n"));
+  if (key.asymmetricKeyType !== "ec" || key.asymmetricKeyDetails?.namedCurve !== "prime256v1") {
+    throw new Error("Neon service JWT key must be an EC P-256 private key");
+  }
+  return key;
 }
 
 export function getNeonServiceJwk() {
   const jwk = createPublicKey(getPrivateKey()).export({ format: "jwk" });
+  if (jwk.kty !== "EC" || jwk.crv !== "P-256") {
+    throw new Error("Neon service JWT key must be an EC P-256 key");
+  }
   return {
     ...jwk,
     kid: process.env.NEON_SERVICE_JWT_KID || DEFAULT_KID,

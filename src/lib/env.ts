@@ -64,5 +64,7 @@ export function getDatabaseApiUrl(): string {
   if (!value) {
     throw new Error("DATABASE_PROVIDER=neon requires NEON_DATA_API_URL");
   }
-  return value;
+  // supabase-js appends `/rest/v1` itself. Neon displays its Data API URL with
+  // that suffix, so accept either form but pass only the API base to the client.
+  return value.replace(/\/rest\/v1\/?$/i, "").replace(/\/$/, "");
 }

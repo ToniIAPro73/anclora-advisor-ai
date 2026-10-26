@@ -26,6 +26,8 @@
 | Neon Data API | Neon MCP, estado y configuración de rama | ACTIVE; esquema `public`, JWT role claim `.role` |
 | RLS | Consulta de catálogos PostgreSQL | 18/18 tablas protegidas; 16 políticas conservadas |
 | Acceso anónimo sin JWT | HTTP GET a `public.users` por Data API | Rechazado con HTTP 400 por falta de JWT |
+| Ruta RAG y URL de Neon | `tests/unit/test-neon-runtime-routing.ts` | PASS; RAG usa el proveedor configurado y no duplica `/rest/v1` |
+| Type-check/lint del cambio de ruta | `npm run -s type-check`; ESLint en los archivos afectados | PASS |
 
 ## 3. Pruebas no ejecutadas (NOT_RUN)
 
@@ -33,7 +35,7 @@
 | --- | --- |
 | Suite de tests, smoke e integración | No se ejecutaron localmente en esta tarea; CI se ejecutará tras el push. |
 | Build de Next.js | No ejecutado localmente. |
-| Flujo autenticado contra Neon y JWT ES256 de servicio | Pendiente de publicar esta revisión, actualizar el JWKS externo de Neon y activar Neon en Preview. |
+| Flujo autenticado extremo a extremo contra Neon y JWT ES256 de servicio | Pendiente de publicar y revisar esta revisión, actualizar el JWKS externo de Neon y activar Neon en Preview. |
 | Revisión visual y smoke de Preview | Pendiente de Toni en el entorno publicado. |
 
 ## 4. Checklist para Toni

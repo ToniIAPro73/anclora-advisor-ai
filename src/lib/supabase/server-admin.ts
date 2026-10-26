@@ -2,7 +2,6 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import {
   getDatabaseApiUrl,
   getDatabaseProvider,
-  getSupabaseAnonKey,
   getSupabaseUrl,
 } from "@/lib/env";
 import { createNeonServiceJwt } from "@/lib/neon/service-jwt";
@@ -17,17 +16,28 @@ function getServiceRoleKey(): string {
 
 export function createServiceSupabaseClient(): SupabaseClient {
   const provider = getDatabaseProvider();
+  const neon = provider === "neon";
   const options = {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
     },
-    ...(provider === "neon"
-      ? { global: { headers: { Authorization: `Bearer ${createNeonServiceJwt()}` } } }
+    ...(neon
+      ? {
+          global: {
+            headers: { Authorization: `Bearer ${createNeonServiceJwt()}` },
+            fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
+              const headers = new Headers(init?.headers);
+              // Neon Data API authorizes the bearer JWT; a Supabase apikey is not used.
+              headers.delete("apikey");
+              return fetch(input, { ...init, headers });
+            },
+          },
+        }
       : {}),
   };
 
-  const apiKey = provider === "neon" ? getSupabaseAnonKey() : getServiceRoleKey();
+  const apiKey = neon ? "neon-data-api" : getServiceRoleKey();
   return createClient(getDatabaseApiUrl(), apiKey, options);
 }
 

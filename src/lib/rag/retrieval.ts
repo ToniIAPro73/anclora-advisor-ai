@@ -1,4 +1,5 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { createServiceSupabaseClient } from '@/lib/supabase/server-admin';
 import { TtlCache } from '../cache/memory';
 import { generateEmbedding } from './embeddings';
 
@@ -21,23 +22,13 @@ function resolveCategory(raw?: string): string {
 }
 
 // ----------------------------------------------------------------
-// Supabase client (service role — server-side only)
+// Provider-aware database client (server-side only)
 // ----------------------------------------------------------------
 let supabaseClient: SupabaseClient | null = null;
 
-function getSupabase(): SupabaseClient {
+export function getRagDatabaseClient(): SupabaseClient {
   if (!supabaseClient) {
-    const url = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!url || !key) {
-      throw new Error(
-        `RAG retrieval: missing Supabase env vars. ` +
-        `SUPABASE_URL: ${!!url}, SUPABASE_SERVICE_ROLE_KEY: ${!!key}`
-      );
-    }
-
-    supabaseClient = createClient(url, key);
+    supabaseClient = createServiceSupabaseClient();
   }
   return supabaseClient;
 }
@@ -302,7 +293,7 @@ async function fetchKeywordCandidates(
   if (queryTokens.length === 0) return [];
 
   async function runSelect(includeDocMetadata: boolean): Promise<RawChunkRow[]> {
-    let query = getSupabase()
+    let query = getRagDatabaseClient()
       .from('rag_chunks')
       .select(
         includeDocMetadata
@@ -373,7 +364,7 @@ async function fallbackRetrieveWithoutRpc(
   limit: number,
   threshold: number
 ): Promise<RAGChunk[]> {
-  let query = getSupabase()
+  let query = getRagDatabaseClient()
     .from('rag_chunks')
     .select(
       `
@@ -464,7 +455,7 @@ export async function retrieveContext(
   }
 
   const vectorMatchCount = hybrid ? Math.max(limit, HYBRID_VECTOR_CANDIDATES) : limit;
-  const { data, error } = await getSupabase().rpc('match_chunks', {
+  const { data, error } = await getRagDatabaseClient().rpc('match_chunks', {
     query_embedding: embedding,
     match_threshold:  threshold,
     match_count:      vectorMatchCount,
