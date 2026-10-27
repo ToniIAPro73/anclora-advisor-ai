@@ -31,7 +31,7 @@ export function getNeonServiceJwk() {
   };
 }
 
-export function createNeonServiceJwt(now = Date.now()): string {
+function createNeonJwt(role: "authenticated" | "service_role", subject: string, now = Date.now()): string {
   const key = getPrivateKey();
   const issuedAt = Math.floor(now / 1000);
   const configuredTtl = Number(process.env.NEON_SERVICE_JWT_TTL_SECONDS);
@@ -51,8 +51,8 @@ export function createNeonServiceJwt(now = Date.now()): string {
       exp: issuedAt + ttl,
       iat: issuedAt,
       iss: issuer,
-      role: "service_role",
-      sub: "advisor-service",
+      role,
+      sub: subject,
     })
   ).toString("base64url");
   const signingInput = `${header}.${payload}`;
@@ -62,4 +62,13 @@ export function createNeonServiceJwt(now = Date.now()): string {
   }).toString("base64url");
 
   return `${signingInput}.${signature}`;
+}
+
+export function createNeonServiceJwt(now = Date.now()): string {
+  return createNeonJwt("service_role", "advisor-service", now);
+}
+
+export function createNeonUserJwt(userId: string, now = Date.now()): string {
+  if (!userId) throw new Error("A mapped Advisor user ID is required for an authenticated Neon JWT");
+  return createNeonJwt("authenticated", userId, now);
 }

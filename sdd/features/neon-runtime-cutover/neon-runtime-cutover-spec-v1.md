@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft for implementation and Preview validation. The production database is not considered migrated until every application data path uses Neon and authenticated read/write QA passes.
+**Staged; production cutover not verified (2026-10-27).** The `development` Preview environment now selects Neon and has branch-scoped Data API/JWT variables. Production still lacks `DATABASE_PROVIDER`, `NEON_DATA_API_URL`, and `NEON_SERVICE_JWT_PRIVATE_KEY`; application code defaults to Supabase there. No production cutover is claimed.
 
 ## Goal
 
@@ -11,10 +11,11 @@ Make Neon PostgreSQL the application-data database for Advisor AI while retainin
 ## Current evidence
 
 - Neon contains the copied public schema and rows; table names and exact per-table row counts were compared with Supabase.
-- `DATABASE_PROVIDER` defaults to `supabase`, so the runtime has not switched.
-- The shared user/admin database clients support Neon Data API, but RAG retrieval creates its own service-role Supabase client and bypasses the provider switch.
+- `DATABASE_PROVIDER` defaults to `supabase`; only Vercel Preview for Git branch `development` now has an explicit `DATABASE_PROVIDER=neon` setting.
+- Production Vercel has Neon Marketplace PostgreSQL connection variables but no Neon Data API/JWT variables or provider selector, so the deployed application still selects Supabase for application-data paths.
+- Shared user/admin clients and RAG retrieval now use the provider-aware service client; no hard-coded RAG database client remains.
 - Browser Supabase usage is currently for authentication; uploads/downloads must continue using Supabase Storage.
-- The existing validation checklist still requires a published, externally fetchable JWKS and authenticated Preview smoke before enabling Neon.
+- The Neon service JWT signing key is present in Preview, but the app has no published JWKS route yet. Neon Data API trust configuration and authenticated read/write smoke remain unverified.
 
 ## Scope
 
@@ -30,18 +31,18 @@ Make Neon PostgreSQL the application-data database for Advisor AI while retainin
 1. With `DATABASE_PROVIDER=neon`, no application-data query uses the Supabase database endpoint.
 2. With `DATABASE_PROVIDER=supabase`, the existing behavior remains available for rollback.
 3. RAG vector/hybrid retrieval works against Neon and returns equivalent results for a fixed fixture.
-4. Auth login/session validation and Storage upload/download still use Supabase.
+4. The current production Auth and Storage integrations remain separate from the database provider; their cutovers are tracked independently.
 5. Unauthenticated Data API access is rejected; authenticated QA access obeys existing RLS and ownership rules.
-6. Type-check, lint, targeted database/provider tests, and Preview smoke pass before production promotion.
+6. Type-check, lint, targeted database/provider checks, and the authorized runtime smoke pass before production promotion; use Preview when that environment is configured for the required Neon Data API/JWKS flow.
 7. Supabase is not paused or deleted as part of this cutover.
 
 ## Out of scope
 
-- Moving authentication to Anclora Identity or Neon Auth.
+- Neon Auth is out of scope; Anclora Identity is tracked by the separate identity integration SDD.
 - Moving file/object storage away from Supabase.
 - Moving the web deployment from Vercel to Cloudflare.
 - Deleting or pausing the Supabase project.
 
 ## Rollback
 
-Set the deployment's `DATABASE_PROVIDER=supabase`, redeploy, and retain Neon data untouched until the rollback window closes. Do not dual-write.
+For the current development Preview, set `DATABASE_PROVIDER=supabase` to roll back. Production remains on its current Supabase provider until a separate approved Neon cutover is fully configured and validated. Retain Neon data and do not dual-write.

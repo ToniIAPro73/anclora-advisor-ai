@@ -85,6 +85,8 @@ Backend Services
 ## 3. Production Database Contract
 
 DATABASE_PROVIDER=Supabase
+DATABASE_TARGET_PROVIDER=Neon
+DATABASE_CUTOVER_STATUS=Development Preview selects Neon; Production remains on Supabase pending Neon Data API/JWKS configuration and authenticated runtime validation
 DATABASE_SCOPE=production
 LOCAL_DATABASE_SCOPE=production
 
@@ -100,6 +102,12 @@ MIGRATION_STRATEGY=SUPABASE_DASHBOARD_OR_CLI
 MIGRATION_DIRECTORY=./supabase/migrations
 MIGRATION_RUNNER=supabase db push
 
+Neon target migration design and cutover evidence are tracked in
+[`sdd/features/neon-runtime-cutover/`](../sdd/features/neon-runtime-cutover/).
+The Production provider remains Supabase until that contract's prerequisites
+and runtime verification are complete. Do not infer a completed cutover from
+Neon Marketplace connection variables or copied schema/data alone.
+
 All schema migrations apply strictly against the designated production database.
 Destructive drops or resets are strictly prohibited without authorization.
 
@@ -113,6 +121,8 @@ Local development utilizes production storage buckets/services according to the 
 ## 6. Authentication Contract
 
 AUTH_PROVIDER=Supabase Auth
+AUTH_TARGET_PROVIDER=Anclora Identity
+AUTH_CUTOVER_STATUS=Production remains on Supabase Auth; Advisor Anclora Identity integration is being implemented in development and is not a production cutover
 AUTH_SCOPE=production
 
 ## 7. External Services & Integrations

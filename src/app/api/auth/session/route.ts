@@ -6,12 +6,17 @@ import { SESSION_COOKIE_NAME } from "@/lib/auth/constants";
 import { syncAppUserRecord } from "@/lib/auth/app-user";
 import { validateAccessToken } from "@/lib/auth/token";
 import { createServiceSupabaseClient } from "@/lib/supabase/server-admin";
+import { isAncloraIdentityEnabled } from "@/lib/auth/identity/env";
+import { clearAdvisorIdentitySession, getAdvisorIdentitySession } from "@/lib/auth/identity/session";
 
 const saveSessionSchema = z.object({
   accessToken: z.string().min(1),
 });
 
 export async function POST(request: NextRequest) {
+  if (isAncloraIdentityEnabled()) {
+    return NextResponse.json({ success: false, error: "USE_ANCLORA_IDENTITY_OIDC_CALLBACK" }, { status: 404 });
+  }
   const parsed = saveSessionSchema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json(
@@ -64,6 +69,25 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE() {
+  if (isAncloraIdentityEnabled()) {
+    const session = await getAdvisorIdentitySession();
+    await clearAdvisorIdentitySession();
+    if (session) {
+      try {
+        await createAuditLog(createServiceSupabaseClient(), {
+          userId: session.userId,
+          domain: "admin_rag",
+          entityType: "auth_session",
+          entityId: session.userId,
+          action: "session_ended",
+          summary: `Sesion Identity cerrada para ${session.email}`,
+        });
+      } catch {
+        // Logout must remain available when audit logging is unavailable.
+      }
+    }
+    return NextResponse.json({ success: true }, { headers: { "Cache-Control": "no-store" } });
+  }
   const currentUser = await getCurrentUserFromCookies();
   const response = NextResponse.json({ success: true });
   response.cookies.set(SESSION_COOKIE_NAME, "", {
@@ -91,6 +115,14 @@ export async function DELETE() {
 }
 
 export async function GET() {
+  if (isAncloraIdentityEnabled()) {
+    const session = await getAdvisorIdentitySession();
+    if (!session) return NextResponse.json({ authenticated: false }, { status: 401, headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({
+      authenticated: true,
+      user: { id: session.userId, email: session.email, user_metadata: { full_name: session.fullName }, app_metadata: { provider: "anclora-identity", application_role: session.role } },
+    }, { headers: { "Cache-Control": "no-store, private" } });
+  }
   const user = await getCurrentUserFromCookies();
   if (!user) {
     return NextResponse.json({ authenticated: false }, { status: 401 });

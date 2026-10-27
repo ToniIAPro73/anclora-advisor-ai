@@ -2,6 +2,8 @@ import type { User } from "@supabase/supabase-js";
 import { getCurrentUserFromCookies } from "@/lib/auth/session";
 import { normalizeAppRole, type AppRole } from "@/lib/auth/roles";
 import { createServiceSupabaseClient } from "@/lib/supabase/server-admin";
+import { isAncloraIdentityEnabled } from "@/lib/auth/identity/env";
+import { getAdvisorIdentitySession } from "@/lib/auth/identity/session";
 
 type AppUserRow = {
   id: string;
@@ -116,6 +118,18 @@ export async function syncAppUserRecord(authUser: User): Promise<AppUserRecord> 
 }
 
 export async function getCurrentAppUserFromCookies(): Promise<AppUserRecord | null> {
+  if (isAncloraIdentityEnabled()) {
+    const session = await getAdvisorIdentitySession();
+    if (!session) return null;
+    return {
+      id: session.userId,
+      email: session.email,
+      fullName: session.fullName,
+      role: normalizeAppRole(session.role),
+      organizationId: null,
+      isActive: true,
+    };
+  }
   const authUser = await getCurrentUserFromCookies();
   if (!authUser) {
     return null;

@@ -42,3 +42,34 @@
 - [ ] Validado en Preview
 - [ ] Autorizar corte de producción
 - [ ] No se promociona. Motivo: ______________________
+
+---
+
+# Checklist de validación — integración de Advisor AI con Anclora Identity (2026-10-27)
+
+**Repositorio:** anclora-advisor-ai
+**Rama:** development
+**Alcance:** añadir el flujo OIDC y sesión de Anclora Identity en Advisor AI, centralizar allí los roles de aplicación y registrar el estado real de Neon sin declarar un corte de producción.
+**Producción:** no modificada; el proveedor efectivo de datos y autenticación sigue siendo Supabase hasta una promoción y configuración explícitas.
+
+## Cambios incluidos
+
+- Rutas de inicio/callback OIDC, validación de sesión Identity y cierre de sesión en Advisor.
+- Resolución de identidad de aplicación y token Neon de usuario, con Identity desactivado por defecto.
+- Script de planificación/aplicación de roles Advisor administrados desde Identity; la migración no se ejecuta por este commit.
+- Contratos y SDD distinguen Supabase efectivo en Producción de Neon/Identity como cambios pendientes.
+
+## Validación de este lote
+
+| Comprobación | Resultado |
+| --- | --- |
+| `git diff --cached --check` | PASS |
+| Pruebas, type-check y build ejecutados en esta intervención | No ejecutados |
+| Revisión y autorización de Toni para commit/push a `development` | Confirmadas en esta conversación |
+
+## Pendiente antes de activar o promocionar
+
+- Verificar el flujo OIDC con una cuenta QA dedicada en el entorno autorizado.
+- Configurar y validar Neon Data API/JWKS y los selectores de proveedor antes de habilitar Identity en el runtime.
+- Ejecutar la migración de roles sólo en el entorno aprobado y comprobar la asignación existente antes de activarla.
+- Mantener Supabase como proveedor de producción hasta completar el corte y la revisión explícita.

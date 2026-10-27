@@ -135,8 +135,10 @@ function UserMenu({ userEmail, locale }: { userEmail: string; locale: "es" | "en
 
   const handleLogout = async () => {
     setOpen(false);
-    const supabase = getSupabaseBrowserClient();
-    await supabase.auth.signOut();
+    if (process.env.NEXT_PUBLIC_ANCLORA_IDENTITY_ENABLED !== "true") {
+      const supabase = getSupabaseBrowserClient();
+      await supabase.auth.signOut();
+    }
     await fetch("/api/auth/session", { method: "DELETE" });
     router.replace("/login");
     router.refresh();

@@ -4,6 +4,8 @@ import { SESSION_COOKIE_NAME } from "@/lib/auth/constants";
 import { isAdminRole } from "@/lib/auth/roles";
 import { validateAccessToken } from "@/lib/auth/token";
 import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/env";
+import { isAncloraIdentityEnabled } from "@/lib/auth/identity/env";
+import { decodeIdentityCookie, type AdvisorIdentitySession } from "@/lib/auth/identity/session-token";
 
 function buildRedirect(request: NextRequest, pathname: string, next?: string) {
   const url = new URL(pathname, request.url);
@@ -29,6 +31,18 @@ export async function middleware(request: NextRequest) {
       const next = `${pathname}${search}`;
       return buildRedirect(request, "/login", next);
     }
+    return NextResponse.next();
+  }
+
+  if (isAncloraIdentityEnabled()) {
+    const sessionSecret = process.env.ANCLORA_IDENTITY_SESSION_SECRET ?? "";
+    const identitySession = await decodeIdentityCookie<AdvisorIdentitySession>(sessionSecret, accessToken);
+    if (!identitySession) {
+      if (isDashboardRoute) return buildRedirect(request, "/login", `${pathname}${search}`);
+      return NextResponse.next();
+    }
+    if (isLoginRoute) return buildRedirect(request, "/dashboard/chat");
+    if (isAdminRoute && identitySession.role !== "admin") return buildRedirect(request, "/dashboard/chat");
     return NextResponse.next();
   }
 
