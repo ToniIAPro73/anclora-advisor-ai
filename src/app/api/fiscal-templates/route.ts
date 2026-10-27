@@ -7,7 +7,7 @@ import { createFiscalTemplateSchema } from "@/lib/fiscal/templates";
 import { getDefaultFiscalModel, getDefaultFiscalRegime } from "@/lib/fiscal/alerts";
 import { resolveLocale, t } from "@/lib/i18n/messages";
 import { getRequestId, log } from "@/lib/observability/logger";
-import { createUserScopedSupabaseClient } from "@/lib/supabase/server-user";
+import { createNeonUserClient } from "@/lib/neon/server-user";
 
 async function getAuthenticatedContext() {
   const cookieStore = await cookies();
@@ -34,8 +34,8 @@ export async function GET(request: NextRequest) {
     return response;
   }
 
-  const supabase = createUserScopedSupabaseClient(auth.accessToken);
-  const { data, error } = await supabase
+  const database = createNeonUserClient(auth.accessToken);
+  const { data, error } = await database
     .from("fiscal_alert_templates")
     .select("id, alert_type, description, priority, recurrence, due_day, due_month, start_date, is_active, tax_regime, tax_model, created_at, updated_at")
     .order("created_at", { ascending: false });
@@ -73,8 +73,8 @@ export async function POST(request: NextRequest) {
     return response;
   }
 
-  const supabase = createUserScopedSupabaseClient(auth.accessToken);
-  const { data, error } = await supabase
+  const database = createNeonUserClient(auth.accessToken);
+  const { data, error } = await database
     .from("fiscal_alert_templates")
     .insert({
       user_id: auth.userId,
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
   const response = NextResponse.json({ success: true, template: data });
   response.headers.set("x-request-id", requestId);
   try {
-    await createAuditLog(supabase, {
+    await createAuditLog(database, {
       userId: auth.userId,
       domain: "fiscal",
       entityType: "fiscal_template",

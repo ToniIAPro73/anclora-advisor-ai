@@ -7,7 +7,7 @@ import { updateInvoiceSchema, type InvoiceRecord } from "@/lib/invoices/contract
 import { getNextInvoiceNumber, INVOICE_SELECT_FIELDS, normalizeInvoiceSeries } from "@/lib/invoices/service";
 import { resolveLocale, t } from "@/lib/i18n/messages";
 import { getRequestId, log } from "@/lib/observability/logger";
-import { createUserScopedSupabaseClient } from "@/lib/supabase/server-user";
+import { createNeonUserClient } from "@/lib/neon/server-user";
 import { calculateInvoiceTotals } from "@/lib/tools/invoice-calculator";
 
 async function getAuthenticatedContext() {
@@ -83,14 +83,14 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   const needsRecalculation =
     patch.amountBase !== undefined || patch.ivaRate !== undefined || patch.irpfRetention !== undefined;
 
-  const supabase = createUserScopedSupabaseClient(auth.accessToken);
+  const database = createNeonUserClient(auth.accessToken);
   let currentInvoice: CurrentInvoiceRow | null = null;
 
   const needsCurrentInvoice =
     needsRecalculation || patch.issueDate !== undefined || patch.series !== undefined;
 
   if (needsCurrentInvoice) {
-    const { data, error } = await supabase
+    const { data, error } = await database
       .from("invoices")
       .select("amount_base, iva_rate, irpf_retention, issue_date, series")
       .eq("id", invoiceId)
@@ -133,7 +133,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const currentSeries = currentInvoice?.series ?? normalizeInvoiceSeries(undefined, currentInvoice?.issue_date ?? nextIssueDate);
     if (nextSeries !== currentSeries) {
       try {
-        updatePayload.invoice_number = await getNextInvoiceNumber(supabase, auth.userId, nextSeries);
+        updatePayload.invoice_number = await getNextInvoiceNumber(database, auth.userId, nextSeries);
       } catch (sequenceError) {
         log("error", "api_invoice_patch_sequence_failed", requestId, {
           invoiceId,
@@ -158,7 +158,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     updatePayload.paid_at = null;
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("invoices")
     .update(updatePayload)
     .eq("id", invoiceId)
@@ -180,7 +180,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   response.headers.set("x-request-id", requestId);
   log("info", "api_invoice_patch_succeeded", requestId, { invoiceId, status: invoiceRecord.status });
   try {
-    await createAuditLog(supabase, {
+    await createAuditLog(database, {
       userId: auth.userId,
       domain: "invoices",
       entityType: "invoice",
@@ -217,8 +217,8 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
   }
 
   const { invoiceId } = await context.params;
-  const supabase = createUserScopedSupabaseClient(auth.accessToken);
-  const { error } = await supabase.from("invoices").delete().eq("id", invoiceId);
+  const database = createNeonUserClient(auth.accessToken);
+  const { error } = await database.from("invoices").delete().eq("id", invoiceId);
 
   if (error) {
     log("error", "api_invoice_delete_failed", requestId, { invoiceId, error: error.message });
@@ -234,7 +234,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
   response.headers.set("x-request-id", requestId);
   log("info", "api_invoice_delete_succeeded", requestId, { invoiceId });
   try {
-    await createAuditLog(supabase, {
+    await createAuditLog(database, {
       userId: auth.userId,
       domain: "invoices",
       entityType: "invoice",

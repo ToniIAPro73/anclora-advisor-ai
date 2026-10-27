@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createServiceSupabaseClient } from "@/lib/supabase/server-admin";
+import { createNeonServiceClient } from "@/lib/neon/server-admin";
 import { getDatabaseProvider } from "@/lib/env";
 import { createAdvisorIdentitySession } from "@/lib/auth/identity/session";
 import { getAdvisorIdentityConfig, isAncloraIdentityEnabled } from "@/lib/auth/identity/env";
@@ -55,7 +55,7 @@ export async function GET(request: Request) {
   try {
     // Keep the legacy Advisor primary key because existing Neon records and RLS
     // policies are owned by this ID. Identity subjects are linked by verified email.
-    const database = createServiceSupabaseClient();
+    const database = createNeonServiceClient();
     const { data: profile, error } = await database
       .from("users")
       .select("id,email,full_name,is_active")

@@ -7,7 +7,7 @@ import type { InvoiceRecord } from "@/lib/invoices/contracts";
 import { getNextInvoiceNumber, INVOICE_SELECT_FIELDS, normalizeInvoiceSeries } from "@/lib/invoices/service";
 import { resolveLocale, t } from "@/lib/i18n/messages";
 import { getRequestId, log } from "@/lib/observability/logger";
-import { createUserScopedSupabaseClient } from "@/lib/supabase/server-user";
+import { createNeonUserClient } from "@/lib/neon/server-user";
 
 type RouteContext = {
   params: Promise<{ invoiceId: string }>;
@@ -45,9 +45,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
   const { invoiceId } = await context.params;
   const payload = (await request.json().catch(() => ({}))) as { reason?: string };
   const reason = payload.reason?.trim() || "Rectificacion operativa";
-  const supabase = createUserScopedSupabaseClient(auth.accessToken);
+  const database = createNeonUserClient(auth.accessToken);
 
-  const { data: currentInvoiceData, error: loadError } = await supabase
+  const { data: currentInvoiceData, error: loadError } = await database
     .from("invoices")
     .select(INVOICE_SELECT_FIELDS)
     .eq("id", invoiceId)
@@ -63,8 +63,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
   }
 
   const nextSeries = normalizeInvoiceSeries(`${currentInvoice.series ?? currentInvoice.issue_date.slice(0, 4)}R`, currentInvoice.issue_date);
-  const nextInvoiceNumber = await getNextInvoiceNumber(supabase, auth.userId, nextSeries);
-  const { data: rectifiedInvoiceData, error } = await supabase
+  const nextInvoiceNumber = await getNextInvoiceNumber(database, auth.userId, nextSeries);
+  const { data: rectifiedInvoiceData, error } = await database
     .from("invoices")
     .insert({
       user_id: auth.userId,
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
   }
 
   try {
-    await createAuditLog(supabase, {
+    await createAuditLog(database, {
       userId: auth.userId,
       domain: "invoices",
       entityType: "invoice",

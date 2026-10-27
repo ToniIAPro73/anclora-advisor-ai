@@ -7,7 +7,6 @@ import { GeneralAlertCenter } from "@/components/layout/GeneralAlertCenter";
 import { useAppPreferences, type ThemeMode } from "@/components/providers/AppPreferencesProvider";
 import type { AppRole } from "@/lib/auth/roles";
 import { uiText } from "@/lib/i18n/ui";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useEffect } from "react";
 
 type SectionCopy = {
@@ -135,10 +134,6 @@ function UserMenu({ userEmail, locale }: { userEmail: string; locale: "es" | "en
 
   const handleLogout = async () => {
     setOpen(false);
-    if (process.env.NEXT_PUBLIC_ANCLORA_IDENTITY_ENABLED !== "true") {
-      const supabase = getSupabaseBrowserClient();
-      await supabase.auth.signOut();
-    }
     await fetch("/api/auth/session", { method: "DELETE" });
     router.replace("/login");
     router.refresh();

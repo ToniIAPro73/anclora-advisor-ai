@@ -17,8 +17,8 @@ import {
 } from "@/lib/invoices/service";
 import { resolveLocale, t } from "@/lib/i18n/messages";
 import { getRequestId, log } from "@/lib/observability/logger";
-import { createServiceSupabaseClient } from "@/lib/supabase/server-admin";
-import { createUserScopedSupabaseClient } from "@/lib/supabase/server-user";
+import { createNeonServiceClient } from "@/lib/neon/server-admin";
+import { createNeonUserClient } from "@/lib/neon/server-user";
 import { deletePrivateAsset, putPrivateAsset } from "@/lib/storage/vercel-blob";
 
 async function getAuthenticatedContext() {
@@ -70,13 +70,13 @@ export async function POST(request: NextRequest) {
     });
     const series = normalizeInvoiceSeries(parsed.series, parsed.issueDate);
 
-    const userScoped = createUserScopedSupabaseClient(auth.accessToken);
+    const userScoped = createNeonUserClient(auth.accessToken);
     const invoiceNumber = await getNextInvoiceNumber(userScoped, auth.userId, series);
 
     const storagePath = buildInvoiceImportStoragePath(auth.userId, file.name);
-    const admin = createServiceSupabaseClient();
+    const admin = createNeonServiceClient();
     await putPrivateAsset(
-      process.env.SUPABASE_INVOICE_IMPORTS_BUCKET?.trim() || "invoice-imports",
+      process.env.ADVISOR_INVOICE_IMPORTS_BUCKET?.trim() || "invoice-imports",
       storagePath,
       buffer,
       file.type || "application/octet-stream",
@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
 
     if (error || !data) {
       await deletePrivateAsset(
-        process.env.SUPABASE_INVOICE_IMPORTS_BUCKET?.trim() || "invoice-imports",
+        process.env.ADVISOR_INVOICE_IMPORTS_BUCKET?.trim() || "invoice-imports",
         storagePath,
       ).catch(() => undefined);
       throw new Error(error?.message ?? "INVOICE_IMPORT_INSERT_FAILED");

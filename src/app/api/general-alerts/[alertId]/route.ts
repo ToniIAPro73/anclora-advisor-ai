@@ -5,7 +5,7 @@ import { updateGeneralAlertSchema } from "@/lib/alerts/general-alerts";
 import { createAuditLog } from "@/lib/audit/logs";
 import { validateAccessToken } from "@/lib/auth/token";
 import { getRequestId, log } from "@/lib/observability/logger";
-import { createUserScopedSupabaseClient } from "@/lib/supabase/server-user";
+import { createNeonUserClient } from "@/lib/neon/server-user";
 
 async function getAuthenticatedContext() {
   const cookieStore = await cookies();
@@ -65,8 +65,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   }
 
   const { alertId } = await context.params;
-  const supabase = createUserScopedSupabaseClient(auth.accessToken);
-  const { data: existing, error: existingError } = await supabase
+  const database = createNeonUserClient(auth.accessToken);
+  const { data: existing, error: existingError } = await database
     .from("general_alerts")
     .select("id, source, category")
     .eq("id", alertId)
@@ -100,7 +100,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     updatePayload.status = payload.data.status;
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("general_alerts")
     .update(updatePayload)
     .eq("id", alertId)
@@ -118,7 +118,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   }
 
   try {
-    await createAuditLog(supabase, {
+    await createAuditLog(database, {
       userId: auth.userId,
       domain: getAuditDomain(existing.category),
       entityType: "general_alert",

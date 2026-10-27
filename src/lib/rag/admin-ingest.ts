@@ -1,4 +1,4 @@
-import { createServiceSupabaseClient } from "@/lib/supabase/server-admin";
+import { createNeonServiceClient } from "@/lib/neon/server-admin";
 import { chunkStructuredText, normalizeText } from "@/lib/rag/chunking";
 import { generateEmbedding } from "@/lib/rag/embeddings";
 import { createDocumentSnapshot } from "@/lib/rag/admin-document-versions";
@@ -51,7 +51,7 @@ function inferSourceType(url: string | null, sourceType: string | null | undefin
 }
 
 export async function ingestAdminSources(payload: AdminIngestRequest): Promise<AdminIngestResult> {
-  const supabase = createServiceSupabaseClient();
+  const database = createNeonServiceClient();
   let documentsProcessed = 0;
   let chunksInserted = 0;
   let replacedDocuments = 0;
@@ -61,7 +61,7 @@ export async function ingestAdminSources(payload: AdminIngestRequest): Promise<A
     const normalizedContent = normalizeText(source.content);
     const chunks = chunkStructuredText(normalizedContent);
 
-    const { data: existingDocument, error: findError } = await supabase
+    const { data: existingDocument, error: findError } = await database
       .from("rag_documents")
       .select("id")
       .eq("title", source.title)
@@ -85,7 +85,7 @@ export async function ingestAdminSources(payload: AdminIngestRequest): Promise<A
     let documentId = existingDocument?.id ?? null;
 
     if (!documentId) {
-      const { data: inserted, error: insertError } = await supabase
+      const { data: inserted, error: insertError } = await database
         .from("rag_documents")
         .insert({
           title: source.title,
@@ -102,7 +102,7 @@ export async function ingestAdminSources(payload: AdminIngestRequest): Promise<A
 
       documentId = inserted.id;
     } else {
-      const { error: updateError } = await supabase
+      const { error: updateError } = await database
         .from("rag_documents")
         .update({
           category: payload.domain,
@@ -124,7 +124,7 @@ export async function ingestAdminSources(payload: AdminIngestRequest): Promise<A
           createdBy: payload.requested_by ?? null,
         });
       }
-      const { error: deleteError } = await supabase
+      const { error: deleteError } = await database
         .from("rag_chunks")
         .delete()
         .eq("document_id", documentId);
@@ -150,7 +150,7 @@ export async function ingestAdminSources(payload: AdminIngestRequest): Promise<A
     }
 
     if (chunkRows.length > 0) {
-      const { error: chunkError } = await supabase
+      const { error: chunkError } = await database
         .from("rag_chunks")
         .insert(chunkRows);
 

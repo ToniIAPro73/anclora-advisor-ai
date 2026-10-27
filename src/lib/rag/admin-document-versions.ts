@@ -1,4 +1,4 @@
-import { createServiceSupabaseClient } from "@/lib/supabase/server-admin";
+import { createNeonServiceClient } from "@/lib/neon/server-admin";
 import { generateEmbedding } from "@/lib/rag/embeddings";
 
 type RagDocumentRow = {
@@ -178,8 +178,8 @@ export function buildDocumentVersionDiff(
 }
 
 async function getNextVersionNumber(documentId: string): Promise<number> {
-  const supabase = createServiceSupabaseClient();
-  const { data, error } = await supabase
+  const database = createNeonServiceClient();
+  const { data, error } = await database
     .from("rag_document_versions")
     .select("version_number")
     .eq("document_id", documentId)
@@ -199,15 +199,15 @@ export async function createDocumentSnapshot(params: {
   snapshotReason: string;
   createdBy?: string | null;
 }): Promise<RagDocumentVersionRecord | null> {
-  const supabase = createServiceSupabaseClient();
+  const database = createNeonServiceClient();
 
   const [{ data: document, error: documentError }, { data: chunks, error: chunksError }] = await Promise.all([
-    supabase
+    database
       .from("rag_documents")
       .select("id, title, category, source_url, doc_metadata")
       .eq("id", params.documentId)
       .single<RagDocumentRow>(),
-    supabase
+    database
       .from("rag_chunks")
       .select("content, token_count")
       .eq("document_id", params.documentId)
@@ -231,7 +231,7 @@ export async function createDocumentSnapshot(params: {
   const versionNumber = await getNextVersionNumber(params.documentId);
   const chunkCharCount = normalizedChunks.reduce((sum, chunk) => sum + chunk.content.length, 0);
 
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("rag_document_versions")
     .insert({
       document_id: params.documentId,
@@ -260,8 +260,8 @@ export async function createDocumentSnapshot(params: {
 }
 
 export async function listDocumentVersions(documentId: string, limit = 10): Promise<RagDocumentVersionRecord[]> {
-  const supabase = createServiceSupabaseClient();
-  const { data, error } = await supabase
+  const database = createNeonServiceClient();
+  const { data, error } = await database
     .from("rag_document_versions")
     .select("*")
     .eq("document_id", documentId)
@@ -296,8 +296,8 @@ export async function rollbackDocumentVersion(params: {
   versionId: string;
   requestedBy?: string | null;
 }): Promise<{ restoredVersion: RagDocumentVersionRecord; insertedChunks: number }> {
-  const supabase = createServiceSupabaseClient();
-  const { data: versionData, error: versionError } = await supabase
+  const database = createNeonServiceClient();
+  const { data: versionData, error: versionError } = await database
     .from("rag_document_versions")
     .select("*")
     .eq("id", params.versionId)
@@ -317,7 +317,7 @@ export async function rollbackDocumentVersion(params: {
   const snapshotDocument = versionData.snapshot_payload.document;
   const snapshotChunks = versionData.snapshot_payload.chunks ?? [];
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await database
     .from("rag_documents")
     .update({
       title: snapshotDocument.title,
@@ -332,7 +332,7 @@ export async function rollbackDocumentVersion(params: {
     throw new Error(updateError.message);
   }
 
-  const { error: deleteChunksError } = await supabase.from("rag_chunks").delete().eq("document_id", params.documentId);
+  const { error: deleteChunksError } = await database.from("rag_chunks").delete().eq("document_id", params.documentId);
   if (deleteChunksError) {
     throw new Error(deleteChunksError.message);
   }
@@ -349,7 +349,7 @@ export async function rollbackDocumentVersion(params: {
   }
 
   if (restoredChunkRows.length > 0) {
-    const { error: insertChunksError } = await supabase.from("rag_chunks").insert(restoredChunkRows);
+    const { error: insertChunksError } = await database.from("rag_chunks").insert(restoredChunkRows);
     if (insertChunksError) {
       throw new Error(insertChunksError.message);
     }

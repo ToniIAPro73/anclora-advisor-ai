@@ -610,7 +610,7 @@ def assemble_manual(
 
     add_heading(doc, "FAQ", 1)
     faq_pairs = [
-        ("¿Qué ocurre si no veo el dashboard tras iniciar sesión?", "Revisa que las cookies y la sesión de Supabase sigan vigentes. Si vuelve a aparecer /login, inicia sesión de nuevo."),
+        ("¿Qué ocurre si no veo el dashboard tras iniciar sesión?", "Revisa que las cookies y la sesión de Anclora Identity sigan vigentes. Si vuelve a aparecer /login, inicia sesión de nuevo."),
         ("¿Puedo usar la plataforma en varios módulos sin salir del dashboard?", "Sí. La navegación lateral permite pasar entre chat, fiscal, laboral, facturación y alertas."),
         ("¿Cómo recibo avisos del navegador?", "Desde la campana del header puedes conceder permiso al navegador y activar las notificaciones."),
         ("¿Dónde edito mis datos personales?", "Pendiente de validación: no se ha verificado una pantalla específica de perfil editable."),

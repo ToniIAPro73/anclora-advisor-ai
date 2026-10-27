@@ -6,18 +6,18 @@ import { Client } from "pg";
 dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 
 const MIGRATION_PATHS = [
-  path.resolve(process.cwd(), "supabase/migrations/20260303_general_alerts_v1.sql"),
-  path.resolve(process.cwd(), "supabase/migrations/20260303_general_alert_reminders_v1.sql"),
+  path.resolve(process.cwd(), "neon/migrations/20260303_general_alerts_v1.sql"),
+  path.resolve(process.cwd(), "neon/migrations/20260303_general_alert_reminders_v1.sql"),
 ];
 
 function getConnectionString(): string {
-  return process.env.DATABASE_URL || process.env.SUPABASE_DB_URL || "";
+  return process.env.DATABASE_URL || process.env.DATABASE_URL || "";
 }
 
 async function main(): Promise<void> {
   const connectionString = getConnectionString();
   if (!connectionString) {
-    console.error("[APPLY] Missing DATABASE_URL/SUPABASE_DB_URL in .env.local");
+    console.error("[APPLY] Missing DATABASE_URL/DATABASE_URL in .env.local");
     process.exit(1);
   }
 
@@ -34,7 +34,7 @@ async function main(): Promise<void> {
   });
 
   try {
-    console.log("[APPLY] Connecting to Supabase Postgres...");
+    console.log("[APPLY] Connecting to Neon Postgres...");
     await client.connect();
     for (const migrationPath of MIGRATION_PATHS) {
       const sql = fs.readFileSync(migrationPath, "utf8");

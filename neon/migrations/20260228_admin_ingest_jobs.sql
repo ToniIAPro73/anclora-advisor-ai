@@ -34,6 +34,6 @@ BEGIN
     CREATE POLICY rag_ingest_jobs_self_read_policy
       ON public.rag_ingest_jobs
       FOR SELECT
-      USING (requested_by = auth.uid());
+      USING (requested_by = auth.user_id());
   END IF;
 END $$;

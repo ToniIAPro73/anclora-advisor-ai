@@ -53,7 +53,7 @@ BEGIN
     CREATE POLICY rag_docs_read_policy
       ON public.rag_documents
       FOR SELECT
-      USING (auth.role() = 'authenticated');
+      USING ((auth.session()->>'role') = 'authenticated');
   END IF;
 END $$;
 
@@ -69,7 +69,7 @@ BEGIN
     CREATE POLICY rag_chunks_read_policy
       ON public.rag_chunks
       FOR SELECT
-      USING (auth.role() = 'authenticated');
+      USING ((auth.session()->>'role') = 'authenticated');
   END IF;
 END $$;
 

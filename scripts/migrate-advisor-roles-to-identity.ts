@@ -1,5 +1,5 @@
 import { loadEnvConfig } from "@next/env";
-import { createServiceSupabaseClient } from "../src/lib/supabase/server-admin";
+import { createNeonServiceClient } from "../src/lib/neon/server-admin";
 import { normalizeAppRole } from "../src/lib/auth/roles";
 
 loadEnvConfig(process.cwd());
@@ -14,7 +14,7 @@ async function main() {
     throw new Error("Set ANCLORA_IDENTITY_ISSUER_URL and ANCLORA_IDENTITY_ROLE_ADMIN_TOKEN in the protected local environment before applying roles");
   }
 
-  const database = createServiceSupabaseClient();
+  const database = createNeonServiceClient();
   const { data, error } = await database.from("users").select("email,role,is_active").order("email");
   if (error) throw new Error(`Unable to read Advisor role source: ${error.message}`);
 

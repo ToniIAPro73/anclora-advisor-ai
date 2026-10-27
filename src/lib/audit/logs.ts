@@ -1,4 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { NeonPostgrestClient } from "@neondatabase/postgrest-js";
 
 export const AUDIT_DOMAIN_VALUES = ["fiscal", "labor", "invoices", "admin_rag", "contracts"] as const;
 export type AuditDomain = (typeof AUDIT_DOMAIN_VALUES)[number];
@@ -38,10 +38,10 @@ type AuditInsertInput = {
 };
 
 export async function createAuditLog(
-  supabase: SupabaseClient,
+  database: NeonPostgrestClient,
   input: AuditInsertInput
 ): Promise<AuditLogRecord> {
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("app_audit_logs")
     .insert({
       user_id: input.userId,

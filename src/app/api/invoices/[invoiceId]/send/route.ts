@@ -10,7 +10,7 @@ import { resolveLocale, t } from "@/lib/i18n/messages";
 import { createAppJob, createEmailOutboxEntry, updateAppJobPayload } from "@/lib/operations/jobs";
 import { isSmtpConfigured } from "@/lib/notifications/smtp";
 import { getRequestId, log } from "@/lib/observability/logger";
-import { createUserScopedSupabaseClient } from "@/lib/supabase/server-user";
+import { createNeonUserClient } from "@/lib/neon/server-user";
 
 const sendInvoiceSchema = z.object({
   recipientEmail: z.string().email().max(255).transform((value) => value.trim().toLowerCase()),
@@ -62,8 +62,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
   }
 
   const { invoiceId } = await context.params;
-  const supabase = createUserScopedSupabaseClient(auth.accessToken);
-  const { data: currentData, error: currentError } = await supabase
+  const database = createNeonUserClient(auth.accessToken);
+  const { data: currentData, error: currentError } = await database
     .from("invoices")
     .select(INVOICE_SELECT_FIELDS)
     .eq("id", invoiceId)
@@ -134,7 +134,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       outboxId: outbox.id,
     });
     try {
-      await createAuditLog(supabase, {
+      await createAuditLog(database, {
         userId: auth.userId,
         domain: "invoices",
         entityType: "invoice_delivery",

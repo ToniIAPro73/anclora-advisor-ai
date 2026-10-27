@@ -19,7 +19,7 @@ import {
   markEmailOutboxSent,
   type AppJobRecord,
 } from "@/lib/operations/jobs";
-import { createServiceSupabaseClient } from "@/lib/supabase/server-admin";
+import { createNeonServiceClient } from "@/lib/neon/server-admin";
 
 function getString(payload: Record<string, unknown>, key: string): string {
   const value = payload[key];
@@ -53,8 +53,8 @@ async function processInvoiceEmailDelivery(job: AppJobRecord): Promise<void> {
   const recipientEmail = getString(job.payload, "recipientEmail");
   const outboxId = getString(job.payload, "outboxId");
 
-  const supabase = createServiceSupabaseClient();
-  const { data, error } = await supabase
+  const database = createNeonServiceClient();
+  const { data, error } = await database
     .from("invoices")
     .select(INVOICE_SELECT_FIELDS)
     .eq("id", invoiceId)
@@ -72,7 +72,7 @@ async function processInvoiceEmailDelivery(job: AppJobRecord): Promise<void> {
     emailSender: createSmtpEmailSender(),
   });
 
-  const { error: invoiceUpdateError } = await supabase
+  const { error: invoiceUpdateError } = await database
     .from("invoices")
     .update({
       recipient_email: recipientEmail,
@@ -104,8 +104,8 @@ async function processGeneralAlertReminderGeneration(job: AppJobRecord): Promise
   const reminderId = getString(job.payload, "reminderId");
   const occurrenceDate = getString(job.payload, "occurrenceDate");
 
-  const supabase = createServiceSupabaseClient();
-  const { data, error } = await supabase
+  const database = createNeonServiceClient();
+  const { data, error } = await database
     .from("general_alert_reminders")
     .select("id, user_id, category, title, message, priority, recurrence, anchor_date, lead_days, link_href, is_active, last_generated_for, created_at, updated_at")
     .eq("id", reminderId)
@@ -127,7 +127,7 @@ async function processGeneralAlertReminderGeneration(job: AppJobRecord): Promise
   }
 
   const sourceKey = `reminder:${reminder.id}:${occurrenceDate}`;
-  const { error: alertError } = await supabase.from("general_alerts").upsert(
+  const { error: alertError } = await database.from("general_alerts").upsert(
     {
       user_id: job.user_id,
       source_key: sourceKey,
@@ -155,7 +155,7 @@ async function processGeneralAlertReminderGeneration(job: AppJobRecord): Promise
     throw new Error(alertError.message);
   }
 
-  const { error: reminderUpdateError } = await supabase
+  const { error: reminderUpdateError } = await database
     .from("general_alert_reminders")
     .update({
       last_generated_for: occurrenceDate,
@@ -196,8 +196,8 @@ async function processInvoiceVerifactuSubmission(job: AppJobRecord): Promise<voi
   }
 
   const invoiceId = getString(job.payload, "invoiceId");
-  const supabase = createServiceSupabaseClient();
-  const { data, error } = await supabase
+  const database = createNeonServiceClient();
+  const { data, error } = await database
     .from("invoices")
     .select(INVOICE_SELECT_FIELDS)
     .eq("id", invoiceId)
@@ -214,7 +214,7 @@ async function processInvoiceVerifactuSubmission(job: AppJobRecord): Promise<voi
     userId: job.user_id,
   });
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await database
     .from("invoices")
     .update({
       verifactu_status: "submitted",
@@ -304,8 +304,8 @@ export async function processPendingAppJobs(params: {
       if (job.job_kind === "invoice_verifactu_submission") {
         const invoiceId = typeof job.payload.invoiceId === "string" ? job.payload.invoiceId : null;
         if (invoiceId) {
-          const supabase = createServiceSupabaseClient();
-          await supabase
+          const database = createNeonServiceClient();
+          await database
             .from("invoices")
             .update({
               verifactu_status: "failed",

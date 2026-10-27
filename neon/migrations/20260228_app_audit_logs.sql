@@ -29,8 +29,8 @@ BEGIN
     CREATE POLICY app_audit_logs_self_policy
       ON public.app_audit_logs
       FOR ALL
-      USING (user_id = auth.uid())
-      WITH CHECK (user_id = auth.uid());
+      USING (user_id = auth.user_id())
+      WITH CHECK (user_id = auth.user_id());
   END IF;
 END $$;
 

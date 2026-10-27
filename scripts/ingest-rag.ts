@@ -1,22 +1,13 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { createClient } from '@supabase/supabase-js';
+import { createNeonServiceClient } from "../src/lib/neon/server-admin";
 import * as dotenv from 'dotenv';
 import { chunkStructuredText, normalizeText } from '../src/lib/rag/chunking';
 
 // Load environment variables from .env.local
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!supabaseUrl || !supabaseKey) {
-  console.error('Missing environment variables. Ensure .env.local has SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.');
-  process.exit(1);
-}
-
-const supabase = createClient(supabaseUrl, supabaseKey);
-
+const database = createNeonServiceClient();
 interface Source {
   title: string;
   url: string | null;
@@ -74,7 +65,7 @@ async function run() {
       
       const sUrl = source.url || '';
 
-      const { data: newDoc, error: insertError } = await supabase
+      const { data: newDoc, error: insertError } = await database
         .from('rag_documents')
         .insert({
           title: source.title,
@@ -102,7 +93,7 @@ async function run() {
       const normalizedContent = normalizeText(source.content);
       const chunks = chunkStructuredText(normalizedContent);
       
-      const { error: chunkError } = await supabase
+      const { error: chunkError } = await database
         .from('rag_chunks')
         .insert(chunks.map(content => ({
           document_id: docId,

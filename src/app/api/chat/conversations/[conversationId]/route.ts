@@ -5,7 +5,7 @@ import { SESSION_COOKIE_NAME } from "@/lib/auth/constants";
 import { validateAccessToken } from "@/lib/auth/token";
 import { resolveLocale, t } from "@/lib/i18n/messages";
 import { getRequestId, log } from "@/lib/observability/logger";
-import { createUserScopedSupabaseClient } from "@/lib/supabase/server-user";
+import { createNeonUserClient } from "@/lib/neon/server-user";
 
 type RouteContext = {
   params: Promise<{ conversationId: string }>;
@@ -46,9 +46,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
   }
 
   const { conversationId } = await context.params;
-  const supabase = createUserScopedSupabaseClient(auth.accessToken);
+  const database = createNeonUserClient(auth.accessToken);
 
-  const { data: conversation, error: conversationError } = await supabase
+  const { data: conversation, error: conversationError } = await database
     .from("conversations")
     .select("id, title, created_at, updated_at")
     .eq("id", conversationId)
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     return response;
   }
 
-  const { data: messages, error: messagesError } = await supabase
+  const { data: messages, error: messagesError } = await database
     .from("messages")
     .select("id, role, content, created_at, context_chunks, suggested_actions")
     .eq("conversation_id", conversationId)
@@ -110,8 +110,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   }
 
   const { conversationId } = await context.params;
-  const supabase = createUserScopedSupabaseClient(auth.accessToken);
-  const { data, error } = await supabase
+  const database = createNeonUserClient(auth.accessToken);
+  const { data, error } = await database
     .from("conversations")
     .update({ title: payload.data.title })
     .eq("id", conversationId)
@@ -148,8 +148,8 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
   }
 
   const { conversationId } = await context.params;
-  const supabase = createUserScopedSupabaseClient(auth.accessToken);
-  const { data, error } = await supabase
+  const database = createNeonUserClient(auth.accessToken);
+  const { data, error } = await database
     .from("conversations")
     .delete()
     .eq("id", conversationId)

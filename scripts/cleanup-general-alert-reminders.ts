@@ -1,6 +1,6 @@
 import * as dotenv from "dotenv";
 import * as path from "path";
-import { createServiceSupabaseClient } from "@/lib/supabase/server-admin";
+import { createNeonServiceClient } from "@/lib/neon/server-admin";
 
 dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 
@@ -10,9 +10,9 @@ const LEGACY_TITLES = [
 ];
 
 async function main(): Promise<void> {
-  const supabase = createServiceSupabaseClient();
+  const database = createNeonServiceClient();
 
-  const { data: reminders, error: reminderError } = await supabase
+  const { data: reminders, error: reminderError } = await database
     .from("general_alert_reminders")
     .select("id")
     .in("title", LEGACY_TITLES);
@@ -28,7 +28,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  const { data: jobs, error: jobsError } = await supabase
+  const { data: jobs, error: jobsError } = await database
     .from("app_jobs")
     .select("id, payload")
     .eq("job_kind", "general_alert_reminder_generation")
@@ -45,7 +45,7 @@ async function main(): Promise<void> {
     })
     .map((job) => job.id);
 
-  const { data: alerts, error: alertsError } = await supabase
+  const { data: alerts, error: alertsError } = await database
     .from("general_alerts")
     .select("id, source_entity_id")
     .eq("source", "reminder")
@@ -60,20 +60,20 @@ async function main(): Promise<void> {
     .map((alert) => alert.id);
 
   if (jobIds.length > 0) {
-    const { error } = await supabase.from("app_jobs").delete().in("id", jobIds);
+    const { error } = await database.from("app_jobs").delete().in("id", jobIds);
     if (error) {
       throw new Error(error.message);
     }
   }
 
   if (alertIds.length > 0) {
-    const { error } = await supabase.from("general_alerts").delete().in("id", alertIds);
+    const { error } = await database.from("general_alerts").delete().in("id", alertIds);
     if (error) {
       throw new Error(error.message);
     }
   }
 
-  const { error: deleteReminderError } = await supabase
+  const { error: deleteReminderError } = await database
     .from("general_alert_reminders")
     .delete()
     .in("id", reminderIds);

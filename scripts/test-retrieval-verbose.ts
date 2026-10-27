@@ -1,6 +1,5 @@
 import { retrieveContext } from '../src/lib/rag/retrieval';
 import { generateEmbeddingVector } from '../src/lib/ai/runtime';
-import { createClient } from '@supabase/supabase-js';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 

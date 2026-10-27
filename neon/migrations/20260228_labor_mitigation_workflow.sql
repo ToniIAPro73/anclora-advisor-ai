@@ -23,6 +23,6 @@ ALTER TABLE labor_mitigation_actions ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS labor_mitigation_user_policy ON labor_mitigation_actions;
 CREATE POLICY labor_mitigation_user_policy ON labor_mitigation_actions
   FOR ALL
-  USING (user_id = auth.uid());
+  USING (user_id = auth.user_id());
 
 COMMENT ON TABLE labor_mitigation_actions IS 'Acciones de mitigacion y seguimiento ligadas a evaluaciones de riesgo laboral';

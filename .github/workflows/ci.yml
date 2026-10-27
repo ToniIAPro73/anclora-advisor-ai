@@ -50,13 +50,17 @@ jobs:
       - name: Preflight secrets
         id: preflight
         env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          E2E_SESSION_COOKIE: ${{ secrets.E2E_SESSION_COOKIE }}
+          NEON_DATA_API_URL: ${{ secrets.NEON_DATA_API_URL }}
+          NEON_SERVICE_JWT_PRIVATE_KEY: ${{ secrets.NEON_SERVICE_JWT_PRIVATE_KEY }}
+          NEON_SERVICE_JWT_KID: ${{ secrets.NEON_SERVICE_JWT_KID }}
+          ANCLORA_IDENTITY_ISSUER_URL: ${{ secrets.ANCLORA_IDENTITY_ISSUER_URL }}
+          ANCLORA_IDENTITY_CLIENT_ID: ${{ secrets.ANCLORA_IDENTITY_CLIENT_ID }}
+          ANCLORA_IDENTITY_CLIENT_SECRET: ${{ secrets.ANCLORA_IDENTITY_CLIENT_SECRET }}
+          ANCLORA_IDENTITY_SESSION_SECRET: ${{ secrets.ANCLORA_IDENTITY_SESSION_SECRET }}
         run: |
           missing=0
-          for name in NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY SUPABASE_SERVICE_ROLE_KEY DATABASE_URL; do
+          for name in E2E_SESSION_COOKIE NEON_DATA_API_URL NEON_SERVICE_JWT_PRIVATE_KEY NEON_SERVICE_JWT_KID ANCLORA_IDENTITY_ISSUER_URL ANCLORA_IDENTITY_CLIENT_ID ANCLORA_IDENTITY_CLIENT_SECRET ANCLORA_IDENTITY_SESSION_SECRET; do
             value="${!name}"
             if [ -z "$value" ]; then
               echo "::warning::Missing GitHub secret: $name"
@@ -81,16 +85,16 @@ jobs:
         if: ${{ steps.preflight.outputs.enabled == 'true' }}
         run: |
           cat <<'EOF' > .env.local
-          NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          DATABASE_URL=${{ secrets.DATABASE_URL }}
-          SUPABASE_DB_URL=${{ secrets.DATABASE_URL }}
+          E2E_SESSION_COOKIE=${{ secrets.E2E_SESSION_COOKIE }}
+          NEON_DATA_API_URL=${{ secrets.NEON_DATA_API_URL }}
+          NEON_SERVICE_JWT_PRIVATE_KEY=${{ secrets.NEON_SERVICE_JWT_PRIVATE_KEY }}
+          NEON_SERVICE_JWT_KID=${{ secrets.NEON_SERVICE_JWT_KID }}
+          ANCLORA_IDENTITY_ISSUER_URL=${{ secrets.ANCLORA_IDENTITY_ISSUER_URL }}
+          ANCLORA_IDENTITY_CLIENT_ID=${{ secrets.ANCLORA_IDENTITY_CLIENT_ID }}
+          ANCLORA_IDENTITY_CLIENT_SECRET=${{ secrets.ANCLORA_IDENTITY_CLIENT_SECRET }}
+          ANCLORA_IDENTITY_SESSION_SECRET=${{ secrets.ANCLORA_IDENTITY_SESSION_SECRET }}
           NEXT_PUBLIC_API_URL=http://127.0.0.1:3000
           PORT=3000
-          AUTH_PROVIDER=supabase
           EOF
 
       - name: Playwright UI E2E

@@ -29,8 +29,8 @@ BEGIN
     CREATE POLICY fiscal_alert_templates_self_policy
       ON public.fiscal_alert_templates
       FOR ALL
-      USING (user_id = auth.uid())
-      WITH CHECK (user_id = auth.uid());
+      USING (user_id = auth.user_id())
+      WITH CHECK (user_id = auth.user_id());
   END IF;
 END $$;
 

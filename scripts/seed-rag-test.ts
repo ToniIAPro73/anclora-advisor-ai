@@ -1,21 +1,18 @@
 // scripts/seed-rag-test.ts
-import { createClient } from '@supabase/supabase-js';
+import { createNeonServiceClient } from "../src/lib/neon/server-admin";
 import { pipeline } from '@xenova/transformers';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 
-const supabaseUrl = process.env.SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabase = createClient(supabaseUrl, supabaseKey);
-
+const database = createNeonServiceClient();
 async function seed() {
   console.log('🚀 Seeding test RAG data...');
   
   const embedder = await pipeline('feature-extraction', 'Xenova/paraphrase-multilingual-MiniLM-L12-v2');
 
-  const { data: doc, error: docError } = await supabase
+  const { data: doc, error: docError } = await database
     .from('rag_documents')
     .insert([
       { title: 'Normativa RETA 2025', category: 'fiscal', source_url: 'https://example.com/reta2025' }
@@ -38,7 +35,7 @@ async function seed() {
     const output = await embedder(content, { pooling: 'mean', normalize: true });
     const embedding = Array.from(output.data);
 
-    const { error: chunkError } = await supabase
+    const { error: chunkError } = await database
       .from('rag_chunks')
       .insert({
         document_id: doc.id,

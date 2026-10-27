@@ -1,4 +1,4 @@
-import { createServiceSupabaseClient } from "@/lib/supabase/server-admin";
+import { createNeonServiceClient } from "@/lib/neon/server-admin";
 
 export const APP_JOB_STATUS_VALUES = ["pending", "running", "completed", "failed"] as const;
 export type AppJobStatus = (typeof APP_JOB_STATUS_VALUES)[number];
@@ -52,8 +52,8 @@ type CreateAppJobInput = {
 };
 
 export async function createAppJob(input: CreateAppJobInput): Promise<AppJobRecord> {
-  const supabase = createServiceSupabaseClient();
-  const { data, error } = await supabase
+  const database = createNeonServiceClient();
+  const { data, error } = await database
     .from("app_jobs")
     .insert({
       user_id: input.userId,
@@ -79,8 +79,8 @@ export async function createEmailOutboxEntry(input: {
   recipientEmail: string;
   subject: string;
 }): Promise<EmailOutboxRecord> {
-  const supabase = createServiceSupabaseClient();
-  const { data, error } = await supabase
+  const database = createNeonServiceClient();
+  const { data, error } = await database
     .from("email_outbox")
     .insert({
       user_id: input.userId,
@@ -101,8 +101,8 @@ export async function createEmailOutboxEntry(input: {
 }
 
 export async function listRecentAppJobsForUser(userId: string, limit = 8): Promise<AppJobRecord[]> {
-  const supabase = createServiceSupabaseClient();
-  const { data, error } = await supabase
+  const database = createNeonServiceClient();
+  const { data, error } = await database
     .from("app_jobs")
     .select("*")
     .eq("user_id", userId)
@@ -117,8 +117,8 @@ export async function listRecentAppJobsForUser(userId: string, limit = 8): Promi
 }
 
 export async function listRecentEmailOutboxForUser(userId: string, limit = 8): Promise<EmailOutboxRecord[]> {
-  const supabase = createServiceSupabaseClient();
-  const { data, error } = await supabase
+  const database = createNeonServiceClient();
+  const { data, error } = await database
     .from("email_outbox")
     .select("*")
     .eq("user_id", userId)
@@ -133,9 +133,9 @@ export async function listRecentEmailOutboxForUser(userId: string, limit = 8): P
 }
 
 export async function listUserIdsWithPendingJobs(limit = 100): Promise<string[]> {
-  const supabase = createServiceSupabaseClient();
+  const database = createNeonServiceClient();
   const now = new Date().toISOString();
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("app_jobs")
     .select("user_id")
     .eq("status", "pending")
@@ -160,9 +160,9 @@ export async function claimPendingJobs(params: {
   userId: string;
   limit: number;
 }): Promise<AppJobRecord[]> {
-  const supabase = createServiceSupabaseClient();
+  const database = createNeonServiceClient();
   const now = new Date().toISOString();
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("app_jobs")
     .select("*")
     .eq("user_id", params.userId)
@@ -179,7 +179,7 @@ export async function claimPendingJobs(params: {
   const claimed: AppJobRecord[] = [];
 
   for (const job of jobs) {
-    const { data: updated, error: updateError } = await supabase
+    const { data: updated, error: updateError } = await database
       .from("app_jobs")
       .update({
         status: "running",
@@ -200,8 +200,8 @@ export async function claimPendingJobs(params: {
 }
 
 export async function completeAppJob(jobId: string, result: Record<string, unknown>): Promise<void> {
-  const supabase = createServiceSupabaseClient();
-  const { error } = await supabase
+  const database = createNeonServiceClient();
+  const { error } = await database
     .from("app_jobs")
     .update({
       status: "completed",
@@ -218,8 +218,8 @@ export async function completeAppJob(jobId: string, result: Record<string, unkno
 }
 
 export async function updateAppJobPayload(jobId: string, payload: Record<string, unknown>): Promise<void> {
-  const supabase = createServiceSupabaseClient();
-  const { error } = await supabase
+  const database = createNeonServiceClient();
+  const { error } = await database
     .from("app_jobs")
     .update({
       payload,
@@ -237,12 +237,12 @@ export async function failAppJob(params: {
   message: string;
   retryable?: boolean;
 }): Promise<void> {
-  const supabase = createServiceSupabaseClient();
+  const database = createNeonServiceClient();
   const attempts = params.job.attempts + 1;
   const canRetry = Boolean(params.retryable) && attempts < params.job.max_attempts;
   const nextRun = new Date(Date.now() + 5 * 60 * 1000).toISOString();
 
-  const { error } = await supabase
+  const { error } = await database
     .from("app_jobs")
     .update({
       status: canRetry ? "pending" : "failed",
@@ -263,8 +263,8 @@ export async function markEmailOutboxSent(params: {
   outboxId: string;
   providerMessageId: string;
 }): Promise<void> {
-  const supabase = createServiceSupabaseClient();
-  const { error } = await supabase
+  const database = createNeonServiceClient();
+  const { error } = await database
     .from("email_outbox")
     .update({
       status: "sent",
@@ -285,8 +285,8 @@ export async function markEmailOutboxFailed(params: {
   message: string;
   keepQueued?: boolean;
 }): Promise<void> {
-  const supabase = createServiceSupabaseClient();
-  const { error } = await supabase
+  const database = createNeonServiceClient();
+  const { error } = await database
     .from("email_outbox")
     .update({
       status: params.keepQueued ? "queued" : "failed",

@@ -10,7 +10,7 @@ import {
 } from "@/lib/labor/assessments";
 import { resolveLocale, t } from "@/lib/i18n/messages";
 import { getRequestId, log } from "@/lib/observability/logger";
-import { createUserScopedSupabaseClient } from "@/lib/supabase/server-user";
+import { createNeonUserClient } from "@/lib/neon/server-user";
 
 type RouteContext = {
   params: Promise<{ actionId: string }>;
@@ -57,8 +57,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
   const { actionId } = await context.params;
   const patch = payload.data;
-  const supabase = createUserScopedSupabaseClient(auth.accessToken);
-  const { data: currentAction, error: currentActionError } = await supabase
+  const database = createNeonUserClient(auth.accessToken);
+  const { data: currentAction, error: currentActionError } = await database
     .from("labor_mitigation_actions")
     .select(LABOR_MITIGATION_SELECT_FIELDS)
     .eq("id", actionId)
@@ -117,7 +117,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     updatePayload.last_follow_up_at = new Date().toISOString();
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("labor_mitigation_actions")
     .update(updatePayload)
     .eq("id", actionId)
@@ -137,7 +137,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   const response = NextResponse.json({ success: true, action: data });
   response.headers.set("x-request-id", requestId);
   try {
-    await createAuditLog(supabase, {
+    await createAuditLog(database, {
       userId: auth.userId,
       domain: "labor",
       entityType: "labor_mitigation_action",
@@ -170,8 +170,8 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
   }
 
   const { actionId } = await context.params;
-  const supabase = createUserScopedSupabaseClient(auth.accessToken);
-  const { error } = await supabase.from("labor_mitigation_actions").delete().eq("id", actionId);
+  const database = createNeonUserClient(auth.accessToken);
+  const { error } = await database.from("labor_mitigation_actions").delete().eq("id", actionId);
 
   if (error) {
     log("error", "api_labor_mitigation_delete_failed", requestId, { actionId, error: error.message });
@@ -186,7 +186,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
   const response = NextResponse.json({ success: true });
   response.headers.set("x-request-id", requestId);
   try {
-    await createAuditLog(supabase, {
+    await createAuditLog(database, {
       userId: auth.userId,
       domain: "labor",
       entityType: "labor_mitigation_action",

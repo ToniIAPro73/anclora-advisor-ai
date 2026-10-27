@@ -2,12 +2,12 @@ import * as path from "path";
 import * as fs from "fs/promises";
 import { Client } from "pg";
 
-const MIGRATION_PATH = path.resolve(process.cwd(), "supabase/migrations/20260303_invoice_image_import_v8.sql");
+const MIGRATION_PATH = path.resolve(process.cwd(), "neon/migrations/20260303_invoice_image_import_v8.sql");
 
 async function main(): Promise<void> {
-  const databaseUrl = process.env.DATABASE_URL ?? process.env.SUPABASE_DB_URL;
+  const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
-    throw new Error("DATABASE_URL or SUPABASE_DB_URL is required");
+    throw new Error("DATABASE_URL is required");
   }
 
   const sql = await fs.readFile(MIGRATION_PATH, "utf8");

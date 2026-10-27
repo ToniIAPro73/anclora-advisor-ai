@@ -1,5 +1,5 @@
 /**
- * Unit tests for the legal document validator (DI mocks — no LLM, no RAG, no Supabase).
+ * Unit tests for the legal document validator (DI mocks — no LLM or RAG).
  * Run: npx tsx tests/unit/test-legal-document-validator.ts
  */
 

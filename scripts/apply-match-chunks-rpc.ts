@@ -12,18 +12,18 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 
 const MIGRATION_PATH = path.resolve(
   process.cwd(),
-  'supabase/migrations/20260227_rag_infra_hardening.sql'
+  'neon/migrations/20260227_rag_infra_hardening.sql'
 );
 
 function getConnectionString(): string {
-  return process.env.SUPABASE_DB_URL ?? process.env.DATABASE_URL ?? '';
+  return process.env.DATABASE_URL ?? '';
 }
 
 async function main(): Promise<void> {
   const connectionString = getConnectionString();
   if (!connectionString) {
-    console.error('[APPLY] Missing SUPABASE_DB_URL/DATABASE_URL in .env.local');
-    console.error('[APPLY] Use the direct Postgres connection string from Supabase > Connect > Session pooler.');
+    console.error('[APPLY] Missing DATABASE_URL in .env.local');
+    console.error('[APPLY] Use the Neon direct Postgres connection string.');
     process.exit(1);
   }
 
@@ -39,7 +39,7 @@ async function main(): Promise<void> {
   });
 
   try {
-    console.log('[APPLY] Connecting to Supabase Postgres...');
+    console.log('[APPLY] Connecting to Neon Postgres...');
     await client.connect();
     console.log('[APPLY] Connected. Applying migration bundle...');
     await client.query(sql);
@@ -47,8 +47,8 @@ async function main(): Promise<void> {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error('[APPLY] ERROR:', msg);
-    console.log('\n[APPLY] Apply manually in Supabase SQL Editor using:');
-    console.log('  supabase/migrations/20260227_rag_infra_hardening.sql');
+    console.log('\n[APPLY] Apply manually in the Neon SQL Editor using:');
+    console.log('  neon/migrations/20260227_rag_infra_hardening.sql');
     process.exit(1);
   } finally {
     await client.end();

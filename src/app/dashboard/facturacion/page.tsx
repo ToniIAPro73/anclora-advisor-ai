@@ -6,7 +6,7 @@ import { getAccessTokenFromCookies, getCurrentUserFromCookies } from "@/lib/auth
 import type { InvoicePaymentRecord, InvoiceRecord } from "@/lib/invoices/contracts";
 import { resolveLocale } from "@/lib/i18n/messages";
 import { uiText } from "@/lib/i18n/ui";
-import { createUserScopedSupabaseClient } from "@/lib/supabase/server-user";
+import { createNeonUserClient } from "@/lib/neon/server-user";
 
 interface DashboardFacturacionPageProps {
   searchParams?: Promise<{
@@ -30,8 +30,8 @@ export default async function DashboardFacturacionPage({ searchParams }: Dashboa
   const cookieStore = await cookies();
   const locale = resolveLocale(cookieStore.get("anclora.locale")?.value);
   const params = (await searchParams) ?? {};
-  const supabase = createUserScopedSupabaseClient(accessToken);
-  const { data } = await supabase
+  const database = createNeonUserClient(accessToken);
+  const { data } = await database
     .from("invoices")
     .select(
       "id, client_name, client_nif, amount_base, iva_rate, irpf_retention, total_amount, issue_date, status, series, invoice_number, recipient_email, sent_at, paid_at, payment_method, payment_reference, payment_notes, invoice_type, rectifies_invoice_id, rectification_reason, verifactu_status, verifactu_submitted_at, verifactu_submission_id, verifactu_last_error, import_source, import_file_name, import_storage_path, import_confidence, imported_at, created_at"
@@ -39,14 +39,14 @@ export default async function DashboardFacturacionPage({ searchParams }: Dashboa
     .order("created_at", { ascending: false })
     .limit(60);
 
-  const { data: auditData } = await supabase
+  const { data: auditData } = await database
     .from("app_audit_logs")
     .select("id, user_id, domain, entity_type, entity_id, action, summary, metadata, created_at")
     .eq("domain", "invoices")
     .order("created_at", { ascending: false })
     .limit(8);
 
-  const { data: paymentData } = await supabase
+  const { data: paymentData } = await database
     .from("invoice_payments")
     .select("id, invoice_id, amount, paid_at, payment_method, payment_reference, notes, created_at")
     .order("paid_at", { ascending: false })

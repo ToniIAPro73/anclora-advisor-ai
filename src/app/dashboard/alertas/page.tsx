@@ -5,7 +5,7 @@ import type { GeneralAlertReminderRecord } from "@/lib/alerts/general-alert-remi
 import type { GeneralAlertRecord } from "@/lib/alerts/general-alerts";
 import { getAccessTokenFromCookies, getCurrentUserFromCookies } from "@/lib/auth/session";
 import { resolveLocale } from "@/lib/i18n/messages";
-import { createUserScopedSupabaseClient } from "@/lib/supabase/server-user";
+import { createNeonUserClient } from "@/lib/neon/server-user";
 
 export default async function DashboardAlertasPage() {
   const user = await getCurrentUserFromCookies();
@@ -17,15 +17,15 @@ export default async function DashboardAlertasPage() {
 
   const cookieStore = await cookies();
   const locale = resolveLocale(cookieStore.get("anclora.locale")?.value);
-  const supabase = createUserScopedSupabaseClient(accessToken);
+  const database = createNeonUserClient(accessToken);
 
   const [{ data: alertsData }, { data: remindersData }] = await Promise.all([
-    supabase
+    database
       .from("general_alerts")
       .select("id, user_id, source_key, source, source_entity_type, source_entity_id, category, title, message, priority, status, due_date, link_href, metadata, read_at, browser_notified_at, created_at, updated_at")
       .order("created_at", { ascending: false })
       .limit(120),
-    supabase
+    database
       .from("general_alert_reminders")
       .select("id, user_id, category, title, message, priority, recurrence, anchor_date, lead_days, link_href, is_active, last_generated_for, created_at, updated_at")
       .order("created_at", { ascending: false })

@@ -1,5 +1,5 @@
 import type { FiscalAlertTemplateRecord } from "@/lib/fiscal/templates";
-import { createServiceSupabaseClient } from "@/lib/supabase/server-admin";
+import { createNeonServiceClient } from "@/lib/neon/server-admin";
 
 function toUtcDateParts(value: string): { year: number; month: number; day: number } {
   const [year, month, day] = value.split("-").map((item) => Number.parseInt(item, 10));
@@ -77,8 +77,8 @@ export async function generateFiscalAlertsFromTemplates(params: {
   templatesProcessed: number;
   alertsCreated: number;
 }> {
-  const supabase = createServiceSupabaseClient();
-  let query = supabase
+  const database = createNeonServiceClient();
+  let query = database
     .from("fiscal_alert_templates")
     .select("*")
     .eq("user_id", params.userId)
@@ -101,7 +101,7 @@ export async function generateFiscalAlertsFromTemplates(params: {
     const dueDates = buildDueDates(template, params.horizonMonths ?? 6);
     for (const dueDate of dueDates) {
       const periodKey = buildPeriodKey(template.recurrence, dueDate);
-      const { data: existing, error: existingError } = await supabase
+      const { data: existing, error: existingError } = await database
         .from("fiscal_alerts")
         .select("id")
         .eq("user_id", params.userId)
@@ -117,7 +117,7 @@ export async function generateFiscalAlertsFromTemplates(params: {
         continue;
       }
 
-      const { error: insertError } = await supabase
+      const { error: insertError } = await database
         .from("fiscal_alerts")
         .insert({
           user_id: params.userId,

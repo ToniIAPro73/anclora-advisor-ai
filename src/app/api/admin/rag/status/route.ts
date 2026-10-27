@@ -5,7 +5,7 @@ import { parseAdminStatusFilters } from "@/lib/rag/admin-status-filters";
 import { getAdminStatusData } from "@/lib/rag/admin-status-service";
 import { listRecentAdminIngestJobs } from "@/lib/rag/admin-jobs";
 import { getRequestId, log } from "@/lib/observability/logger";
-import { createServiceSupabaseClient } from "@/lib/supabase/server-admin";
+import { createNeonServiceClient } from "@/lib/neon/server-admin";
 
 export async function GET(request: NextRequest) {
   const requestId = getRequestId(request.headers.get("x-request-id"));
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const payload = await getAdminStatusData({
-      supabase: createServiceSupabaseClient(),
+      database: createNeonServiceClient(),
       filters: parseAdminStatusFilters(searchParams),
       listRecentJobs: listRecentAdminIngestJobs,
     });

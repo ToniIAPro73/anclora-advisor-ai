@@ -6,7 +6,7 @@ import type { InvoiceRecord } from "@/lib/invoices/contracts";
 import { renderInvoicePrintableHtml } from "@/lib/invoices/pdf";
 import { INVOICE_SELECT_FIELDS } from "@/lib/invoices/service";
 import { getRequestId, log } from "@/lib/observability/logger";
-import { createUserScopedSupabaseClient } from "@/lib/supabase/server-user";
+import { createNeonUserClient } from "@/lib/neon/server-user";
 
 async function getAuthenticatedAccessToken(): Promise<string | null> {
   const cookieStore = await cookies();
@@ -36,8 +36,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
   }
 
   const { invoiceId } = await context.params;
-  const supabase = createUserScopedSupabaseClient(accessToken);
-  const { data, error } = await supabase
+  const database = createNeonUserClient(accessToken);
+  const { data, error } = await database
     .from("invoices")
     .select(INVOICE_SELECT_FIELDS)
     .eq("id", invoiceId)

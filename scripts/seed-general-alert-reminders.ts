@@ -2,7 +2,7 @@ import * as dotenv from "dotenv";
 import * as path from "path";
 import { buildReminderRunAfter, getNextReminderOccurrence } from "@/lib/alerts/general-alert-reminders";
 import { createAppJob } from "@/lib/operations/jobs";
-import { createServiceSupabaseClient } from "@/lib/supabase/server-admin";
+import { createNeonServiceClient } from "@/lib/neon/server-admin";
 
 dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 
@@ -146,8 +146,8 @@ const LEGACY_TITLES = [
 ];
 
 async function main(): Promise<void> {
-  const supabase = createServiceSupabaseClient();
-  const { data: users, error: usersError } = await supabase
+  const database = createNeonServiceClient();
+  const { data: users, error: usersError } = await database
     .from("users")
     .select("id, email, is_active")
     .eq("is_active", true);
@@ -161,7 +161,7 @@ async function main(): Promise<void> {
   let deactivated = 0;
 
   for (const user of users ?? []) {
-    const { data: legacyRows, error: legacyError } = await supabase
+    const { data: legacyRows, error: legacyError } = await database
       .from("general_alert_reminders")
       .select("id")
       .eq("user_id", user.id)
@@ -173,7 +173,7 @@ async function main(): Promise<void> {
     }
 
     for (const row of legacyRows ?? []) {
-      const { error: deactivateError } = await supabase
+      const { error: deactivateError } = await database
         .from("general_alert_reminders")
         .update({
           is_active: false,
@@ -188,7 +188,7 @@ async function main(): Promise<void> {
     }
 
     for (const preset of PRESETS) {
-      const { data: existing, error: existingError } = await supabase
+      const { data: existing, error: existingError } = await database
         .from("general_alert_reminders")
         .select("id, title, category, message, priority, recurrence, anchor_date, lead_days, link_href, is_active")
         .eq("user_id", user.id)
@@ -212,7 +212,7 @@ async function main(): Promise<void> {
           current.is_active !== true;
 
         if (needsUpdate) {
-          const { error: updateError } = await supabase
+          const { error: updateError } = await database
             .from("general_alert_reminders")
             .update({
               category: preset.category,
@@ -236,7 +236,7 @@ async function main(): Promise<void> {
         continue;
       }
 
-      const { data: createdReminder, error: insertError } = await supabase
+      const { data: createdReminder, error: insertError } = await database
         .from("general_alert_reminders")
         .insert({
           user_id: user.id,

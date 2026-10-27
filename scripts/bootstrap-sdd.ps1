@@ -51,7 +51,7 @@ $dirs = @(
   ".agent/skills/features/spec-driven-feature-delivery",
   ".agent/skills/features/chat-reliability-and-safety",
   ".agent/skills/features/rag-grounding-and-citations",
-  ".agent/skills/features/supabase-data-quality-and-rls",
+  ".agent/skills/features/neon-data-quality-and-roles",
   ".agent/skills/features/conversation-ux-and-accessibility",
   ".agent/skills/features/observability-and-error-intelligence",
   ".agent/skills/features/$FeatureName",
@@ -123,8 +123,8 @@ Feature ID: $FeatureId
   ".agent/skills/features/rag-grounding-and-citations/SKILL.md" = @"
 # SKILL: RAG Grounding and Citations
 "@;
-  ".agent/skills/features/supabase-data-quality-and-rls/SKILL.md" = @"
-# SKILL: Supabase Data Quality and RLS
+  ".agent/skills/features/neon-data-quality-and-roles/SKILL.md" = @"
+# SKILL: Neon Data Quality and Database Roles
 "@;
   ".agent/skills/features/conversation-ux-and-accessibility/SKILL.md" = @"
 # SKILL: Conversation UX and Accessibility

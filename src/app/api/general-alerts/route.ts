@@ -14,7 +14,7 @@ import type { FiscalAlertRecord } from "@/lib/fiscal/alerts";
 import type { InvoiceRecord } from "@/lib/invoices/contracts";
 import type { LaborMitigationActionRecord } from "@/lib/labor/assessments";
 import { getRequestId, log } from "@/lib/observability/logger";
-import { createUserScopedSupabaseClient } from "@/lib/supabase/server-user";
+import { createNeonUserClient } from "@/lib/neon/server-user";
 
 async function getAuthenticatedContext() {
   const cookieStore = await cookies();
@@ -46,22 +46,22 @@ function getAuditDomain(category: string): "fiscal" | "labor" | "invoices" {
 }
 
 async function syncSystemAlerts(accessToken: string, userId: string) {
-  const supabase = createUserScopedSupabaseClient(accessToken);
+  const database = createNeonUserClient(accessToken);
 
   const [fiscalResult, laborResult, invoiceResult, currentResult] = await Promise.all([
-    supabase
+    database
       .from("fiscal_alerts")
       .select("id, alert_type, description, due_date, priority, status, workflow_status, presented_at, template_id, period_key, source, tax_regime, tax_model, created_at")
       .limit(100),
-    supabase
+    database
       .from("labor_mitigation_actions")
       .select("id, assessment_id, title, description, status, due_date, sla_due_at, owner_name, owner_email, evidence_notes, closure_notes, checklist_items, evidence_links, started_at, completed_at, last_follow_up_at, created_at, updated_at")
       .limit(200),
-    supabase
+    database
       .from("invoices")
       .select("id, client_name, client_nif, amount_base, iva_rate, irpf_retention, total_amount, issue_date, status, series, invoice_number, recipient_email, sent_at, paid_at, payment_method, payment_reference, payment_notes, invoice_type, rectifies_invoice_id, rectification_reason, created_at")
       .limit(120),
-    supabase
+    database
       .from("general_alerts")
       .select("id, source_key, status")
       .in("source", ["fiscal", "laboral", "facturacion"]),
@@ -87,7 +87,7 @@ async function syncSystemAlerts(accessToken: string, userId: string) {
   });
 
   if (candidates.length > 0) {
-    const { error: upsertError } = await supabase.from("general_alerts").upsert(
+    const { error: upsertError } = await database.from("general_alerts").upsert(
       candidates.map((candidate) => ({
         user_id: userId,
         source_key: candidate.sourceKey,
@@ -118,7 +118,7 @@ async function syncSystemAlerts(accessToken: string, userId: string) {
     .map((item) => item.id);
 
   if (staleIds.length > 0) {
-    const { error: staleError } = await supabase
+    const { error: staleError } = await database
       .from("general_alerts")
       .update({
         status: "resolved",
@@ -152,8 +152,8 @@ export async function GET(request: NextRequest) {
 
   try {
     await syncSystemAlerts(auth.accessToken, auth.userId);
-    const supabase = createUserScopedSupabaseClient(auth.accessToken);
-    let query = supabase
+    const database = createNeonUserClient(auth.accessToken);
+    let query = database
       .from("general_alerts")
       .select("id, user_id, source_key, source, source_entity_type, source_entity_id, category, title, message, priority, status, due_date, link_href, metadata, read_at, browser_notified_at, created_at, updated_at")
       .order("created_at", { ascending: false })
@@ -210,8 +210,8 @@ export async function POST(request: NextRequest) {
     return response;
   }
 
-  const supabase = createUserScopedSupabaseClient(auth.accessToken);
-  const { data, error } = await supabase
+  const database = createNeonUserClient(auth.accessToken);
+  const { data, error } = await database
     .from("general_alerts")
     .insert({
       user_id: auth.userId,
@@ -244,7 +244,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    await createAuditLog(supabase, {
+    await createAuditLog(database, {
       userId: auth.userId,
       domain: getAuditDomain(payload.data.category),
       entityType: "general_alert",

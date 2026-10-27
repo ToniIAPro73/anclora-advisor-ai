@@ -10,7 +10,7 @@ import { createAuditLog } from "@/lib/audit/logs";
 import { validateAccessToken } from "@/lib/auth/token";
 import { createAppJob } from "@/lib/operations/jobs";
 import { getRequestId, log } from "@/lib/observability/logger";
-import { createUserScopedSupabaseClient } from "@/lib/supabase/server-user";
+import { createNeonUserClient } from "@/lib/neon/server-user";
 
 async function getAuthenticatedContext() {
   const cookieStore = await cookies();
@@ -50,8 +50,8 @@ async function deletePendingReminderJobs(params: {
   userId: string;
   accessToken: string;
 }): Promise<void> {
-  const supabase = createUserScopedSupabaseClient(params.accessToken);
-  const { data, error } = await supabase
+  const database = createNeonUserClient(params.accessToken);
+  const { data, error } = await database
     .from("app_jobs")
     .select("id, payload")
     .eq("job_kind", "general_alert_reminder_generation")
@@ -74,7 +74,7 @@ async function deletePendingReminderJobs(params: {
     return;
   }
 
-  const { error: deleteError } = await supabase
+  const { error: deleteError } = await database
     .from("app_jobs")
     .delete()
     .in("id", idsToDelete);
@@ -109,8 +109,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   }
 
   const { reminderId } = await context.params;
-  const supabase = createUserScopedSupabaseClient(auth.accessToken);
-  const { data: existing, error: existingError } = await supabase
+  const database = createNeonUserClient(auth.accessToken);
+  const { data: existing, error: existingError } = await database
     .from("general_alert_reminders")
     .select("id, category, title, message, priority, recurrence, anchor_date, lead_days, link_href, is_active")
     .eq("id", reminderId)
@@ -156,7 +156,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     updatePayload.is_active = payload.data.isActive;
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("general_alert_reminders")
     .update(updatePayload)
     .eq("id", reminderId)
@@ -212,7 +212,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   }
 
   try {
-    await createAuditLog(supabase, {
+    await createAuditLog(database, {
       userId: auth.userId,
       domain: getAuditDomain(data.category),
       entityType: "general_alert_reminder",

@@ -7,7 +7,7 @@ import type { FiscalAlertRecord } from "@/lib/fiscal/alerts";
 import type { FiscalAlertTemplateRecord } from "@/lib/fiscal/templates";
 import { resolveLocale } from "@/lib/i18n/messages";
 import { uiText } from "@/lib/i18n/ui";
-import { createUserScopedSupabaseClient } from "@/lib/supabase/server-user";
+import { createNeonUserClient } from "@/lib/neon/server-user";
 
 interface DashboardFiscalPageProps {
   searchParams?: Promise<{ q?: string; alertId?: string }>;
@@ -24,19 +24,19 @@ export default async function DashboardFiscalPage({ searchParams }: DashboardFis
   const cookieStore = await cookies();
   const locale = resolveLocale(cookieStore.get("anclora.locale")?.value);
   const params = (await searchParams) ?? {};
-  const supabase = createUserScopedSupabaseClient(accessToken);
-  const { data, error } = await supabase
+  const database = createNeonUserClient(accessToken);
+  const { data, error } = await database
     .from("fiscal_alerts")
     .select("id, alert_type, description, due_date, priority, status, workflow_status, presented_at, template_id, period_key, source, tax_regime, tax_model, created_at")
     .order("due_date", { ascending: true })
     .limit(60);
 
-  const { data: templateData, error: templateError } = await supabase
+  const { data: templateData, error: templateError } = await database
     .from("fiscal_alert_templates")
     .select("id, alert_type, description, priority, recurrence, due_day, due_month, start_date, is_active, tax_regime, tax_model, created_at, updated_at")
     .order("created_at", { ascending: false });
 
-  const { data: auditData, error: auditError } = await supabase
+  const { data: auditData, error: auditError } = await database
     .from("app_audit_logs")
     .select("id, user_id, domain, entity_type, entity_id, action, summary, metadata, created_at")
     .eq("domain", "fiscal")

@@ -10,7 +10,7 @@ import {
 } from "@/lib/invoices/contracts";
 import { INVOICE_SELECT_FIELDS } from "@/lib/invoices/service";
 import { getRequestId, log } from "@/lib/observability/logger";
-import { createUserScopedSupabaseClient } from "@/lib/supabase/server-user";
+import { createNeonUserClient } from "@/lib/neon/server-user";
 
 type RouteContext = {
   params: Promise<{ invoiceId: string }>;
@@ -46,8 +46,8 @@ async function recalculateInvoiceStatus(
   accessToken: string,
   invoiceId: string,
 ): Promise<InvoiceRecord> {
-  const supabase = createUserScopedSupabaseClient(accessToken);
-  const { data: invoice, error: invoiceError } = await supabase
+  const database = createNeonUserClient(accessToken);
+  const { data: invoice, error: invoiceError } = await database
     .from("invoices")
     .select(INVOICE_SELECT_FIELDS)
     .eq("id", invoiceId)
@@ -58,7 +58,7 @@ async function recalculateInvoiceStatus(
   }
 
   const invoiceRecord = invoice as unknown as InvoiceRecord;
-  const { data: paymentRows, error: paymentsError } = await supabase
+  const { data: paymentRows, error: paymentsError } = await database
     .from("invoice_payments")
     .select(INVOICE_PAYMENT_SELECT_FIELDS)
     .eq("invoice_id", invoiceId)
@@ -82,7 +82,7 @@ async function recalculateInvoiceStatus(
         ? "paid"
         : "issued";
 
-  const { data: updatedInvoice, error: updateError } = await supabase
+  const { data: updatedInvoice, error: updateError } = await database
     .from("invoices")
     .update({
       status: nextStatus,
@@ -112,8 +112,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
   }
 
   const { invoiceId } = await context.params;
-  const supabase = createUserScopedSupabaseClient(auth.accessToken);
-  const { data, error } = await supabase
+  const database = createNeonUserClient(auth.accessToken);
+  const { data, error } = await database
     .from("invoice_payments")
     .select(INVOICE_PAYMENT_SELECT_FIELDS)
     .eq("invoice_id", invoiceId)
@@ -146,8 +146,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
   }
 
   const { invoiceId } = await context.params;
-  const supabase = createUserScopedSupabaseClient(auth.accessToken);
-  const { data: invoiceRow, error: invoiceError } = await supabase
+  const database = createNeonUserClient(auth.accessToken);
+  const { data: invoiceRow, error: invoiceError } = await database
     .from("invoices")
     .select(INVOICE_SELECT_FIELDS)
     .eq("id", invoiceId)
@@ -158,7 +158,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
   }
 
   const invoiceRecord = invoiceRow as unknown as InvoiceRecord;
-  const { data: existingPayments, error: existingPaymentsError } = await supabase
+  const { data: existingPayments, error: existingPaymentsError } = await database
     .from("invoice_payments")
     .select("amount")
     .eq("invoice_id", invoiceId);
@@ -173,7 +173,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ success: false, error: "PAYMENT_EXCEEDS_OUTSTANDING_BALANCE" }, { status: 400 });
   }
 
-  const { data: createdPayment, error: createError } = await supabase
+  const { data: createdPayment, error: createError } = await database
     .from("invoice_payments")
     .insert({
       invoice_id: invoiceId,
@@ -195,7 +195,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
   try {
     const invoice = await recalculateInvoiceStatus(auth.accessToken, invoiceId);
 
-    await createAuditLog(supabase, {
+    await createAuditLog(database, {
       userId: auth.userId,
       domain: "invoices",
       entityType: "invoice_payment",

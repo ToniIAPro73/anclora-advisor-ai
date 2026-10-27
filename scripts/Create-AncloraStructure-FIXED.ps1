@@ -75,16 +75,16 @@ $envContent = @"
 # ============================================================
 
 # ============================================================
-# SUPABASE CONFIGURATION
+# NEON DATABASE CONFIGURATION
 # ============================================================
-SUPABASE_URL=
-SUPABASE_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
+NEON_DATA_API_URL=
+NEON_JWT_KEY_ID=
+NEON_SERVICE_JWT_PRIVATE_KEY=
 
 # ============================================================
 # AUTHENTICATION
 # ============================================================
-AUTH_PROVIDER=supabase
+AUTH_PROVIDER=anclora-identity
 
 # ============================================================
 # LLM CONFIGURATION - LOCAL (OLLAMA)
@@ -249,7 +249,7 @@ $packageJsonContent = @"
   "license": "PROPRIETARY",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.21.0",
-    "@supabase/supabase-js": "^2.38.0",
+    "@neondatabase/postgrest-js": "^2.38.0",
     "axios": "^1.6.0",
     "dotenv": "^16.3.1",
     "next": "^15.0.0",
@@ -358,8 +358,8 @@ $llmConfigContent = @"
     "device": "cpu"
   },
   "vector_store": {
-    "type": "supabase_pgvector",
-    "provider": "supabase",
+    "type": "neon_pgvector",
+    "provider": "neon",
     "table": "rag_chunks",
     "embedding_column": "embedding",
     "similarity_metric": "cosine",
@@ -612,7 +612,7 @@ Sistema RAG (Retrieval-Augmented Generation) multi-especialista para autónomos 
 
 - **Frontend:** Next.js 15 + React 19 + Tailwind CSS
 - **Backend:** Node.js 20 + TypeScript
-- **Base de Datos:** Supabase (PostgreSQL + pgvector)
+- **Base de Datos:** Neon PostgreSQL + pgvector
 - **LLM:** Ollama (Mistral 7B local) + Claude (fallback)
 - **Orquestación:** Multi-Agent Orchestrator (TypeScript)
 
@@ -627,7 +627,7 @@ npm install
 
 # 3. Configurar variables de entorno
 Copy-Item .env.example .env.local
-# Editar .env.local con tus credenciales Supabase + Anthropic
+# Editar .env.local con tus credenciales Neon y Anclora Identity + Anthropic
 
 # 4. Configurar base de datos
 npm run db:setup
@@ -671,7 +671,7 @@ Response + Alerts + Citations
 ## ✅ Próximos Pasos
 
 1. Rellenar \`.env.local\` con credenciales
-2. Crear base de datos en Supabase
+2. Crear base de datos en Neon
 3. npm run db:setup
 4. npm run dev
 5. Acceder a http://localhost:3000
@@ -705,7 +705,7 @@ Write-Host ""
 Write-Host "📍 Ubicación: $ProjectPath" -ForegroundColor Green
 Write-Host ""
 Write-Host "🎯 Próximos pasos:" -ForegroundColor Cyan
-Write-Host "  1. Editar .env.local con tus credenciales Supabase + Anthropic"
+Write-Host "  1. Editar .env.local con tus credenciales Neon y Anclora Identity + Anthropic"
 Write-Host "  2. Ejecutar: npm install"
 Write-Host "  3. Ejecutar: npm run db:setup"
 Write-Host "  4. Ejecutar: npm run dev"

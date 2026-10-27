@@ -7,17 +7,17 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 
 const MIGRATION_PATH = path.resolve(
   process.cwd(),
-  'supabase/migrations/20260228_rag_document_metadata.sql'
+  'neon/migrations/20260228_rag_document_metadata.sql'
 );
 
 function getConnectionString(): string {
-  return process.env.SUPABASE_DB_URL ?? process.env.DATABASE_URL ?? '';
+  return process.env.DATABASE_URL ?? process.env.DATABASE_URL ?? '';
 }
 
 async function main(): Promise<void> {
   const connectionString = getConnectionString();
   if (!connectionString) {
-    console.error('[APPLY] Missing SUPABASE_DB_URL/DATABASE_URL in .env.local');
+    console.error('[APPLY] Missing DATABASE_URL/DATABASE_URL in .env.local');
     process.exit(1);
   }
 
@@ -33,7 +33,7 @@ async function main(): Promise<void> {
   });
 
   try {
-    console.log('[APPLY] Connecting to Supabase Postgres...');
+    console.log('[APPLY] Connecting to Neon Postgres...');
     await client.connect();
     console.log('[APPLY] Connected. Applying doc_metadata migration...');
     await client.query(sql);

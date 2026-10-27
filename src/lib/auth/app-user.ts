@@ -1,8 +1,6 @@
-import type { User } from "@supabase/supabase-js";
-import { getCurrentUserFromCookies } from "@/lib/auth/session";
+import type { IdentityUser } from "@/lib/auth/identity-user";
 import { normalizeAppRole, type AppRole } from "@/lib/auth/roles";
-import { createServiceSupabaseClient } from "@/lib/supabase/server-admin";
-import { isAncloraIdentityEnabled } from "@/lib/auth/identity/env";
+import { createNeonServiceClient } from "@/lib/neon/server-admin";
 import { getAdvisorIdentitySession } from "@/lib/auth/identity/session";
 
 type AppUserRow = {
@@ -23,7 +21,7 @@ export interface AppUserRecord {
   isActive: boolean;
 }
 
-function getAuthUserFullName(user: User): string | null {
+function getAuthUserFullName(user: IdentityUser): string | null {
   const metadata = user.user_metadata;
   if (!metadata || typeof metadata !== "object") {
     return null;
@@ -53,12 +51,12 @@ function mapAppUserRow(row: AppUserRow): AppUserRecord {
   };
 }
 
-export async function syncAppUserRecord(authUser: User): Promise<AppUserRecord> {
-  const supabase = createServiceSupabaseClient();
+export async function syncAppUserRecord(authUser: IdentityUser): Promise<AppUserRecord> {
+  const database = createNeonServiceClient();
   const desiredEmail = authUser.email ?? "";
   const desiredFullName = getAuthUserFullName(authUser);
 
-  const { data: existing, error: selectError } = await supabase
+  const { data: existing, error: selectError } = await database
     .from("users")
     .select("id, email, full_name, role, organization_id, is_active")
     .eq("id", authUser.id)
@@ -69,7 +67,7 @@ export async function syncAppUserRecord(authUser: User): Promise<AppUserRecord> 
   }
 
   if (!existing) {
-    const { data: inserted, error: insertError } = await supabase
+    const { data: inserted, error: insertError } = await database
       .from("users")
       .insert({
         id: authUser.id,
@@ -98,7 +96,7 @@ export async function syncAppUserRecord(authUser: User): Promise<AppUserRecord> 
     return mapAppUserRow(existing);
   }
 
-  const { data: updated, error: updateError } = await supabase
+  const { data: updated, error: updateError } = await database
     .from("users")
     .update({
       email: nextEmail,
@@ -118,22 +116,14 @@ export async function syncAppUserRecord(authUser: User): Promise<AppUserRecord> 
 }
 
 export async function getCurrentAppUserFromCookies(): Promise<AppUserRecord | null> {
-  if (isAncloraIdentityEnabled()) {
-    const session = await getAdvisorIdentitySession();
-    if (!session) return null;
-    return {
-      id: session.userId,
-      email: session.email,
-      fullName: session.fullName,
-      role: normalizeAppRole(session.role),
-      organizationId: null,
-      isActive: true,
-    };
-  }
-  const authUser = await getCurrentUserFromCookies();
-  if (!authUser) {
-    return null;
-  }
-
-  return syncAppUserRecord(authUser);
+  const session = await getAdvisorIdentitySession();
+  if (!session) return null;
+  const database = createNeonServiceClient();
+  const { data: profile, error } = await database
+    .from("users")
+    .select("id,email,full_name,role,organization_id,is_active")
+    .eq("id", session.userId)
+    .maybeSingle<AppUserRow>();
+  if (error || !profile || profile.is_active === false) return null;
+  return mapAppUserRow(profile);
 }

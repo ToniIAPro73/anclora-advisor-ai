@@ -36,6 +36,6 @@ BEGIN
     CREATE POLICY users_self_read_policy
       ON public.users
       FOR SELECT
-      USING (id = auth.uid());
+      USING (id = auth.user_id());
   END IF;
 END $$;

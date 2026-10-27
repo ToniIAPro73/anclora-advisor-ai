@@ -6,7 +6,7 @@ import { createAuditLog } from "@/lib/audit/logs";
 import { validateAccessToken } from "@/lib/auth/token";
 import { createAppJob } from "@/lib/operations/jobs";
 import { getRequestId, log } from "@/lib/observability/logger";
-import { createUserScopedSupabaseClient } from "@/lib/supabase/server-user";
+import { createNeonUserClient } from "@/lib/neon/server-user";
 
 const generateTemplatesSchema = z.object({
   horizonMonths: z.number().int().min(1).max(12).optional(),
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     log("info", "api_fiscal_templates_generate_enqueued", requestId, { userId: auth.userId, jobId: job.id });
     if (auth.accessToken) {
       try {
-        await createAuditLog(createUserScopedSupabaseClient(auth.accessToken), {
+        await createAuditLog(createNeonUserClient(auth.accessToken), {
           userId: auth.userId,
           domain: "fiscal",
           entityType: "fiscal_template_generation",

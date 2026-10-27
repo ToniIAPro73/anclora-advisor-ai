@@ -10,8 +10,8 @@ import {
   buildLaborEvidencePath,
   extractStoragePathFromEvidenceUrl,
 } from "@/lib/labor/evidence";
-import { createServiceSupabaseClient } from "@/lib/supabase/server-admin";
-import { createUserScopedSupabaseClient } from "@/lib/supabase/server-user";
+import { createNeonServiceClient } from "@/lib/neon/server-admin";
+import { createNeonUserClient } from "@/lib/neon/server-user";
 import { deletePrivateAsset, getPrivateAsset, putPrivateAsset } from "@/lib/storage/vercel-blob";
 
 type RouteContext = {
@@ -34,8 +34,8 @@ async function getAuthenticatedContext() {
 }
 
 async function loadUserAction(accessToken: string, actionId: string): Promise<LaborMitigationActionRecord> {
-  const supabase = createUserScopedSupabaseClient(accessToken);
-  const { data, error } = await supabase
+  const database = createNeonUserClient(accessToken);
+  const { data, error } = await database
     .from("labor_mitigation_actions")
     .select(LABOR_MITIGATION_SELECT_FIELDS)
     .eq("id", actionId)
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ success: false, error: "EVIDENCE_NOT_AVAILABLE" }, { status: 404 });
     }
     const asset = await getPrivateAsset(
-      process.env.SUPABASE_LABOR_EVIDENCE_BUCKET?.trim() || "labor-evidence",
+      process.env.ADVISOR_LABOR_EVIDENCE_BUCKET?.trim() || "labor-evidence",
       storagePath,
     );
     if (!asset) {
@@ -115,9 +115,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const action = await loadUserAction(auth.accessToken, actionId);
     const storagePath = buildLaborEvidencePath(auth.userId, actionId, file.name);
     const arrayBuffer = await file.arrayBuffer();
-    const admin = createServiceSupabaseClient();
+    const admin = createNeonServiceClient();
     await putPrivateAsset(
-      process.env.SUPABASE_LABOR_EVIDENCE_BUCKET?.trim() || "labor-evidence",
+      process.env.ADVISOR_LABOR_EVIDENCE_BUCKET?.trim() || "labor-evidence",
       storagePath,
       Buffer.from(arrayBuffer),
       file.type || "application/octet-stream",
@@ -138,7 +138,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       },
     ];
 
-    const userScoped = createUserScopedSupabaseClient(auth.accessToken);
+    const userScoped = createNeonUserClient(auth.accessToken);
     const { data, error } = await userScoped
       .from("labor_mitigation_actions")
       .update({
@@ -151,7 +151,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     if (error || !data) {
       await deletePrivateAsset(
-        process.env.SUPABASE_LABOR_EVIDENCE_BUCKET?.trim() || "labor-evidence",
+        process.env.ADVISOR_LABOR_EVIDENCE_BUCKET?.trim() || "labor-evidence",
         storagePath,
       ).catch(() => undefined);
       throw new Error(error?.message ?? "EVIDENCE_UPDATE_FAILED");
@@ -213,9 +213,9 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       (item.storagePath ?? extractStoragePathFromEvidenceUrl(item.url)) !== storagePath,
     );
 
-    const admin = createServiceSupabaseClient();
+    const admin = createNeonServiceClient();
 
-    const userScoped = createUserScopedSupabaseClient(auth.accessToken);
+    const userScoped = createNeonUserClient(auth.accessToken);
     const { data, error } = await userScoped
       .from("labor_mitigation_actions")
       .update({
@@ -230,7 +230,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       throw new Error(error?.message ?? "EVIDENCE_DELETE_FAILED");
     }
     await deletePrivateAsset(
-      process.env.SUPABASE_LABOR_EVIDENCE_BUCKET?.trim() || "labor-evidence",
+      process.env.ADVISOR_LABOR_EVIDENCE_BUCKET?.trim() || "labor-evidence",
       storagePath,
     ).catch((error) => {
       log("error", "api_labor_evidence_blob_delete_failed", requestId, {

@@ -10,9 +10,9 @@ CREATE EXTENSION IF NOT EXISTS vector;
 -- AUTHENTICATION & USERS
 -- ============================================================
 
--- CORRECCIÓN: El id debe referenciar a auth.users para que las políticas RLS con auth.uid() funcionen.
+-- IDs are issued by Anclora Identity and stored directly in the application users table.
 CREATE TABLE users (
-  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  id UUID PRIMARY KEY,
   email VARCHAR(255) UNIQUE NOT NULL,
   full_name VARCHAR(255),
   role VARCHAR(50) DEFAULT 'personal', -- 'personal', 'admin', 'client'
@@ -147,32 +147,32 @@ ALTER TABLE rag_chunks ENABLE ROW LEVEL SECURITY;
 -- Policy: Users can only see their own data
 CREATE POLICY user_data_policy ON conversations
   FOR ALL
-  USING (user_id = auth.uid());
+  USING (user_id = auth.user_id());
 
 CREATE POLICY message_data_policy ON messages
   FOR ALL
-  USING (conversation_id IN (SELECT id FROM conversations WHERE user_id = auth.uid()));
+  USING (conversation_id IN (SELECT id FROM conversations WHERE user_id = auth.user_id()));
 
 CREATE POLICY alert_data_policy ON fiscal_alerts
   FOR ALL
-  USING (user_id = auth.uid());
+  USING (user_id = auth.user_id());
 
 CREATE POLICY risk_data_policy ON labor_risk_assessments
   FOR ALL
-  USING (user_id = auth.uid());
+  USING (user_id = auth.user_id());
 
 CREATE POLICY invoice_data_policy ON invoices
   FOR ALL
-  USING (user_id = auth.uid());
+  USING (user_id = auth.user_id());
 
 -- RAG documents and chunks are public for reading by authenticated users
 CREATE POLICY rag_docs_read_policy ON rag_documents
   FOR SELECT
-  USING (auth.role() = 'authenticated');
+  USING ((auth.session()->>'role') = 'authenticated');
 
 CREATE POLICY rag_chunks_read_policy ON rag_chunks
   FOR SELECT
-  USING (auth.role() = 'authenticated');
+  USING ((auth.session()->>'role') = 'authenticated');
 
 -- ============================================================
 -- INITIAL COMMENTS

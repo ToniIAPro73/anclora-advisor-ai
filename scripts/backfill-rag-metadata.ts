@@ -1,19 +1,9 @@
 import * as path from 'node:path';
 import * as dotenv from 'dotenv';
-import { createClient } from '@supabase/supabase-js';
-
+import { createNeonServiceClient } from "../src/lib/neon/server-admin";
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!supabaseUrl || !supabaseKey) {
-  console.error('Missing SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY');
-  process.exit(1);
-}
-
-const supabase = createClient(supabaseUrl, supabaseKey);
-
+const database = createNeonServiceClient();
 interface RagDocumentRow {
   id: string;
   title: string;
@@ -51,7 +41,7 @@ function inferSourceType(sourceUrl: string | null): string {
 }
 
 async function main(): Promise<void> {
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from('rag_documents')
     .select('id, title, category, source_url, doc_metadata');
 
@@ -69,7 +59,7 @@ async function main(): Promise<void> {
       topic: inferTopic(row.title, row.category ?? ''),
     };
 
-    const { error: updateError } = await supabase
+    const { error: updateError } = await database
       .from('rag_documents')
       .update({ doc_metadata: nextMetadata })
       .eq('id', row.id);

@@ -1,9 +1,9 @@
 import { cookies } from "next/headers";
-import type { User } from "@supabase/supabase-js";
+import type { IdentityUser } from "@/lib/auth/identity-user";
 import { validateAccessToken } from "@/lib/auth/token";
 import { SESSION_COOKIE_NAME } from "@/lib/auth/constants";
 
-export async function getCurrentUserFromCookies(): Promise<User | null> {
+export async function getCurrentUserFromCookies(): Promise<IdentityUser | null> {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 

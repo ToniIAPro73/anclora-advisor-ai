@@ -5,7 +5,7 @@ import { getAccessTokenFromCookies, getCurrentUserFromCookies } from "@/lib/auth
 import type { ChatConversationRecord, ChatPersistedMessageRecord } from "@/lib/chat/contracts";
 import { resolveLocale } from "@/lib/i18n/messages";
 import { uiText } from "@/lib/i18n/ui";
-import { createUserScopedSupabaseClient } from "@/lib/supabase/server-user";
+import { createNeonUserClient } from "@/lib/neon/server-user";
 
 interface DashboardChatPageProps {
   searchParams?: Promise<{ c?: string }>;
@@ -21,9 +21,9 @@ export default async function DashboardChatPage({ searchParams }: DashboardChatP
   const cookieStore = await cookies();
   const locale = resolveLocale(cookieStore.get("anclora.locale")?.value);
   const params = (await searchParams) ?? {};
-  const supabase = createUserScopedSupabaseClient(accessToken);
+  const database = createNeonUserClient(accessToken);
 
-  const { data: conversationData } = await supabase
+  const { data: conversationData } = await database
     .from("conversations")
     .select("id, title, created_at, updated_at")
     .order("updated_at", { ascending: false })
@@ -35,7 +35,7 @@ export default async function DashboardChatPage({ searchParams }: DashboardChatP
 
   let messages: ChatPersistedMessageRecord[] = [];
   if (activeConversation) {
-    const { data: messagesData } = await supabase
+    const { data: messagesData } = await database
       .from("messages")
       .select("id, role, content, created_at, context_chunks, suggested_actions")
       .eq("conversation_id", activeConversation.id)

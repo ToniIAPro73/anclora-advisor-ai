@@ -5,7 +5,7 @@ import { SESSION_COOKIE_NAME } from "@/lib/auth/constants";
 import { validateAccessToken } from "@/lib/auth/token";
 import { resolveLocale, t } from "@/lib/i18n/messages";
 import { getRequestId, log } from "@/lib/observability/logger";
-import { createUserScopedSupabaseClient } from "@/lib/supabase/server-user";
+import { createNeonUserClient } from "@/lib/neon/server-user";
 
 const createConversationSchema = z.object({
   title: z.string().min(1).max(500).optional(),
@@ -41,8 +41,8 @@ export async function GET(request: NextRequest) {
     return response;
   }
 
-  const supabase = createUserScopedSupabaseClient(auth.accessToken);
-  const { data, error } = await supabase
+  const database = createNeonUserClient(auth.accessToken);
+  const { data, error } = await database
     .from("conversations")
     .select("id, title, created_at, updated_at")
     .order("updated_at", { ascending: false })
@@ -89,11 +89,11 @@ export async function POST(request: NextRequest) {
     return response;
   }
 
-  const supabase = createUserScopedSupabaseClient(auth.accessToken);
+  const database = createNeonUserClient(auth.accessToken);
   const defaultTitle = payload.data.title?.trim() || (locale === "en" ? "NEW CONVERSATION" : "Nueva conversacion");
   const placeholderTitles = new Set(["Nueva conversacion", "Nueva conversación", "NEW CONVERSATION", "New conversation"]);
 
-  const { data: recentConversations, error: recentConversationsError } = await supabase
+  const { data: recentConversations, error: recentConversationsError } = await database
     .from("conversations")
     .select("id, title, created_at, updated_at")
     .order("updated_at", { ascending: false })
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      const { data: existingMessages, error: existingMessagesError } = await supabase
+      const { data: existingMessages, error: existingMessagesError } = await database
         .from("messages")
         .select("id")
         .eq("conversation_id", conversation.id)
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("conversations")
     .insert({
       user_id: auth.userId,

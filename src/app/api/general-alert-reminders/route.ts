@@ -11,7 +11,7 @@ import { createAuditLog } from "@/lib/audit/logs";
 import { validateAccessToken } from "@/lib/auth/token";
 import { createAppJob } from "@/lib/operations/jobs";
 import { getRequestId, log } from "@/lib/observability/logger";
-import { createUserScopedSupabaseClient } from "@/lib/supabase/server-user";
+import { createNeonUserClient } from "@/lib/neon/server-user";
 
 async function getAuthenticatedContext() {
   const cookieStore = await cookies();
@@ -56,8 +56,8 @@ export async function GET(request: NextRequest) {
     return response;
   }
 
-  const supabase = createUserScopedSupabaseClient(auth.accessToken);
-  const { data, error } = await supabase
+  const database = createNeonUserClient(auth.accessToken);
+  const { data, error } = await database
     .from("general_alert_reminders")
     .select("id, user_id, category, title, message, priority, recurrence, anchor_date, lead_days, link_href, is_active, last_generated_for, created_at, updated_at")
     .order("created_at", { ascending: false })
@@ -105,8 +105,8 @@ export async function POST(request: NextRequest) {
     return response;
   }
 
-  const supabase = createUserScopedSupabaseClient(auth.accessToken);
-  const { data, error } = await supabase
+  const database = createNeonUserClient(auth.accessToken);
+  const { data, error } = await database
     .from("general_alert_reminders")
     .insert({
       user_id: auth.userId,
@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
   });
 
   try {
-    await createAuditLog(supabase, {
+    await createAuditLog(database, {
       userId: auth.userId,
       domain: getAuditDomain(payload.data.category),
       entityType: "general_alert_reminder",

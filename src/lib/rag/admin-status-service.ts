@@ -9,7 +9,7 @@ type AwaitableQueryLike = PromiseLike<any> & {
   or: (...args: [string]) => AwaitableQueryLike;
 };
 
-type SupabaseLike = {
+type NeonDatabaseLike = {
   from: (...args: [string]) => {
     select: (...args: [string, ({ count?: "exact"; head?: boolean } | undefined)?]) => AwaitableQueryLike;
   };
@@ -27,21 +27,21 @@ export interface AdminStatusDataResult {
 }
 
 export async function getAdminStatusData({
-  supabase,
+  database,
   filters,
   listRecentJobs,
 }: {
-  supabase: SupabaseLike;
+  database: NeonDatabaseLike;
   filters: AdminStatusFilters;
   listRecentJobs: (...args: [number]) => Promise<unknown[]>;
 }): Promise<AdminStatusDataResult> {
   const { domain, topic, query, limit, offset } = filters;
 
-  let documentsQuery = supabase
+  let documentsQuery = database
     .from("rag_documents")
     .select("id, title, category, created_at, doc_metadata")
     .order("created_at", { ascending: false });
-  let filteredCountQuery = supabase.from("rag_documents").select("id", { count: "exact", head: true });
+  let filteredCountQuery = database.from("rag_documents").select("id", { count: "exact", head: true });
 
   if (domain === "fiscal") {
     documentsQuery = documentsQuery.ilike("doc_metadata->>notebook_title", "%FISCAL%");
@@ -80,8 +80,8 @@ export async function getAdminStatusData({
     { data: recentDocuments, error },
     recentJobs,
   ] = await Promise.all([
-    supabase.from("rag_documents").select("id", { count: "exact", head: true }),
-    supabase.from("rag_chunks").select("id", { count: "exact", head: true }),
+    database.from("rag_documents").select("id", { count: "exact", head: true }),
+    database.from("rag_chunks").select("id", { count: "exact", head: true }),
     filteredCountQuery,
     documentsQuery,
     listRecentJobs(8),

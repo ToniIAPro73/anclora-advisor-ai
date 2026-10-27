@@ -9,7 +9,7 @@ import { isVerifactuConfigured } from "@/lib/invoices/verifactu";
 import { resolveLocale, t } from "@/lib/i18n/messages";
 import { createAppJob } from "@/lib/operations/jobs";
 import { getRequestId, log } from "@/lib/observability/logger";
-import { createUserScopedSupabaseClient } from "@/lib/supabase/server-user";
+import { createNeonUserClient } from "@/lib/neon/server-user";
 
 type RouteContext = {
   params: Promise<{ invoiceId: string }>;
@@ -48,8 +48,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
   }
 
   const { invoiceId } = await context.params;
-  const supabase = createUserScopedSupabaseClient(auth.accessToken);
-  const { data, error } = await supabase
+  const database = createNeonUserClient(auth.accessToken);
+  const { data, error } = await database
     .from("invoices")
     .select(INVOICE_SELECT_FIELDS)
     .eq("id", invoiceId)
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       maxAttempts: 3,
     });
 
-    const { data: updatedInvoice, error: updateError } = await supabase
+    const { data: updatedInvoice, error: updateError } = await database
       .from("invoices")
       .update({
         verifactu_status: "queued",
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     }
 
     try {
-      await createAuditLog(supabase, {
+      await createAuditLog(database, {
         userId: auth.userId,
         domain: "invoices",
         entityType: "invoice_verifactu",

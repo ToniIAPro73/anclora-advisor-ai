@@ -6,7 +6,7 @@ import { validateAccessToken } from "@/lib/auth/token";
 import { updateFiscalAlertSchema } from "@/lib/fiscal/alerts";
 import { resolveLocale, t } from "@/lib/i18n/messages";
 import { getRequestId, log } from "@/lib/observability/logger";
-import { createUserScopedSupabaseClient } from "@/lib/supabase/server-user";
+import { createNeonUserClient } from "@/lib/neon/server-user";
 
 async function getAuthenticatedContext() {
   const cookieStore = await cookies();
@@ -75,8 +75,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     }
   }
 
-  const supabase = createUserScopedSupabaseClient(auth.accessToken);
-  const { data, error } = await supabase
+  const database = createNeonUserClient(auth.accessToken);
+  const { data, error } = await database
     .from("fiscal_alerts")
     .update(updatePayload)
     .eq("id", alertId)
@@ -97,7 +97,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   response.headers.set("x-request-id", requestId);
   log("info", "api_fiscal_alert_patch_succeeded", requestId, { alertId });
   try {
-    await createAuditLog(supabase, {
+    await createAuditLog(database, {
       userId: auth.userId,
       domain: "fiscal",
       entityType: "fiscal_alert",
@@ -131,8 +131,8 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
   }
 
   const { alertId } = await context.params;
-  const supabase = createUserScopedSupabaseClient(auth.accessToken);
-  const { error } = await supabase.from("fiscal_alerts").delete().eq("id", alertId);
+  const database = createNeonUserClient(auth.accessToken);
+  const { error } = await database.from("fiscal_alerts").delete().eq("id", alertId);
 
   if (error) {
     log("error", "api_fiscal_alert_delete_failed", requestId, { alertId, error: error.message });
@@ -148,7 +148,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
   response.headers.set("x-request-id", requestId);
   log("info", "api_fiscal_alert_delete_succeeded", requestId, { alertId });
   try {
-    await createAuditLog(supabase, {
+    await createAuditLog(database, {
       userId: auth.userId,
       domain: "fiscal",
       entityType: "fiscal_alert",

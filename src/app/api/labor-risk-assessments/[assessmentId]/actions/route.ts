@@ -6,7 +6,7 @@ import { validateAccessToken } from "@/lib/auth/token";
 import { createLaborMitigationActionSchema, LABOR_MITIGATION_SELECT_FIELDS } from "@/lib/labor/assessments";
 import { resolveLocale, t } from "@/lib/i18n/messages";
 import { getRequestId, log } from "@/lib/observability/logger";
-import { createUserScopedSupabaseClient } from "@/lib/supabase/server-user";
+import { createNeonUserClient } from "@/lib/neon/server-user";
 
 type RouteContext = {
   params: Promise<{ assessmentId: string }>;
@@ -52,8 +52,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
   }
 
   const { assessmentId } = await context.params;
-  const supabase = createUserScopedSupabaseClient(auth.accessToken);
-  const { data, error } = await supabase
+  const database = createNeonUserClient(auth.accessToken);
+  const { data, error } = await database
     .from("labor_mitigation_actions")
     .insert({
       assessment_id: assessmentId,
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
   const response = NextResponse.json({ success: true, action: data });
   response.headers.set("x-request-id", requestId);
   try {
-    await createAuditLog(supabase, {
+    await createAuditLog(database, {
       userId: auth.userId,
       domain: "labor",
       entityType: "labor_mitigation_action",

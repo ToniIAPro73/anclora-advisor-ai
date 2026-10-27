@@ -10,7 +10,7 @@ import {
 } from "@/lib/labor/assessments";
 import { resolveLocale } from "@/lib/i18n/messages";
 import { uiText } from "@/lib/i18n/ui";
-import { createUserScopedSupabaseClient } from "@/lib/supabase/server-user";
+import { createNeonUserClient } from "@/lib/neon/server-user";
 
 interface DashboardLaboralPageProps {
   searchParams?: Promise<{
@@ -33,20 +33,20 @@ export default async function DashboardLaboralPage({ searchParams }: DashboardLa
   const cookieStore = await cookies();
   const locale = resolveLocale(cookieStore.get("anclora.locale")?.value);
   const params = (await searchParams) ?? {};
-  const supabase = createUserScopedSupabaseClient(accessToken);
-  const { data, error } = await supabase
+  const database = createNeonUserClient(accessToken);
+  const { data, error } = await database
     .from("labor_risk_assessments")
     .select("id, scenario_description, risk_score, risk_level, recommendations, created_at")
     .order("created_at", { ascending: false })
     .limit(40);
 
-  const { data: mitigationData, error: mitigationError } = await supabase
+  const { data: mitigationData, error: mitigationError } = await database
     .from("labor_mitigation_actions")
     .select(LABOR_MITIGATION_SELECT_FIELDS)
     .order("created_at", { ascending: false })
     .limit(120);
 
-  const { data: auditData, error: auditError } = await supabase
+  const { data: auditData, error: auditError } = await database
     .from("app_audit_logs")
     .select("id, user_id, domain, entity_type, entity_id, action, summary, metadata, created_at")
     .eq("domain", "labor")

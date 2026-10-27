@@ -1,131 +1,53 @@
-import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
+import { NextResponse } from "next/server";
 import { createAuditLog } from "@/lib/audit/logs";
-import { getCurrentUserFromCookies } from "@/lib/auth/session";
 import { SESSION_COOKIE_NAME } from "@/lib/auth/constants";
-import { syncAppUserRecord } from "@/lib/auth/app-user";
-import { validateAccessToken } from "@/lib/auth/token";
-import { createServiceSupabaseClient } from "@/lib/supabase/server-admin";
-import { isAncloraIdentityEnabled } from "@/lib/auth/identity/env";
+import { createNeonServiceClient } from "@/lib/neon/server-admin";
 import { clearAdvisorIdentitySession, getAdvisorIdentitySession } from "@/lib/auth/identity/session";
 
-const saveSessionSchema = z.object({
-  accessToken: z.string().min(1),
-});
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-export async function POST(request: NextRequest) {
-  if (isAncloraIdentityEnabled()) {
-    return NextResponse.json({ success: false, error: "USE_ANCLORA_IDENTITY_OIDC_CALLBACK" }, { status: 404 });
+export async function GET() {
+  const session = await getAdvisorIdentitySession();
+  if (!session) {
+    return NextResponse.json({ authenticated: false }, { status: 401, headers: { "Cache-Control": "no-store" } });
   }
-  const parsed = saveSessionSchema.safeParse(await request.json());
-  if (!parsed.success) {
-    return NextResponse.json(
-      { success: false, error: "Invalid payload for session creation." },
-      { status: 400 }
-    );
-  }
-
-  const { user } = await validateAccessToken(parsed.data.accessToken);
-  if (!user) {
-    return NextResponse.json({ success: false, error: "Invalid access token." }, { status: 401 });
-  }
-  let appUser = { id: user.id, email: user.email ?? "", role: "user" };
-  if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    try {
-      appUser = await syncAppUserRecord(user);
-    } catch (syncErr) {
-      console.warn("[session] Failed to sync app user record:", syncErr);
-    }
-  } else {
-    console.warn("[session] Warning: SUPABASE_SERVICE_ROLE_KEY is not set. User sync to public.users skipped.");
-  }
-
-  const response = NextResponse.json({ success: true, user: appUser });
-  response.cookies.set(SESSION_COOKIE_NAME, parsed.data.accessToken, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 7,
-  });
-  try {
-    if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      await createAuditLog(createServiceSupabaseClient(), {
-        userId: appUser.id,
-        domain: "admin_rag",
-        entityType: "auth_session",
-        entityId: appUser.id,
-        action: "session_started",
-        summary: `Sesion iniciada para ${appUser.email}`,
-        metadata: {
-          role: appUser.role,
-        },
-      });
-    }
-  } catch {
-    // Session creation must not fail because of audit logging.
-  }
-  return response;
+  return NextResponse.json({
+    authenticated: true,
+    user: {
+      id: session.userId,
+      email: session.email,
+      user_metadata: { full_name: session.fullName },
+      app_metadata: { provider: "anclora-identity", application_role: session.role },
+    },
+  }, { headers: { "Cache-Control": "no-store, private" } });
 }
 
 export async function DELETE() {
-  if (isAncloraIdentityEnabled()) {
-    const session = await getAdvisorIdentitySession();
-    await clearAdvisorIdentitySession();
-    if (session) {
-      try {
-        await createAuditLog(createServiceSupabaseClient(), {
-          userId: session.userId,
-          domain: "admin_rag",
-          entityType: "auth_session",
-          entityId: session.userId,
-          action: "session_ended",
-          summary: `Sesion Identity cerrada para ${session.email}`,
-        });
-      } catch {
-        // Logout must remain available when audit logging is unavailable.
-      }
+  const session = await getAdvisorIdentitySession();
+  await clearAdvisorIdentitySession();
+  if (session) {
+    try {
+      await createAuditLog(createNeonServiceClient(), {
+        userId: session.userId,
+        domain: "admin_rag",
+        entityType: "auth_session",
+        entityId: session.userId,
+        action: "session_ended",
+        summary: `Sesion Identity cerrada para ${session.email}`,
+      });
+    } catch {
+      // Logout remains available when audit logging is unavailable.
     }
-    return NextResponse.json({ success: true }, { headers: { "Cache-Control": "no-store" } });
   }
-  const currentUser = await getCurrentUserFromCookies();
-  const response = NextResponse.json({ success: true });
+  const response = NextResponse.json({ success: true }, { headers: { "Cache-Control": "no-store" } });
   response.cookies.set(SESSION_COOKIE_NAME, "", {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: 0,
+    expires: new Date(0),
   });
-  if (currentUser?.id) {
-    try {
-      await createAuditLog(createServiceSupabaseClient(), {
-        userId: currentUser.id,
-        domain: "admin_rag",
-        entityType: "auth_session",
-        entityId: currentUser.id,
-        action: "session_ended",
-        summary: `Sesion cerrada para ${currentUser.email ?? currentUser.id}`,
-      });
-    } catch {
-      // Logout must not fail because of audit logging.
-    }
-  }
   return response;
-}
-
-export async function GET() {
-  if (isAncloraIdentityEnabled()) {
-    const session = await getAdvisorIdentitySession();
-    if (!session) return NextResponse.json({ authenticated: false }, { status: 401, headers: { "Cache-Control": "no-store" } });
-    return NextResponse.json({
-      authenticated: true,
-      user: { id: session.userId, email: session.email, user_metadata: { full_name: session.fullName }, app_metadata: { provider: "anclora-identity", application_role: session.role } },
-    }, { headers: { "Cache-Control": "no-store, private" } });
-  }
-  const user = await getCurrentUserFromCookies();
-  if (!user) {
-    return NextResponse.json({ authenticated: false }, { status: 401 });
-  }
-  return NextResponse.json({ authenticated: true, user: { id: user.id, email: user.email } });
 }

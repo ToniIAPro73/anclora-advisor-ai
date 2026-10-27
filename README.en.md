@@ -55,7 +55,7 @@ Advisor AI is an internal tool combining natural language processing, legal docu
 | Framework | Next.js 15 |
 | Frontend | React 19, TypeScript |
 | AI / LLM | Anthropic Claude, OpenAI, Transformers |
-| Database | Supabase (PostgreSQL) |
+| Database | Neon PostgreSQL |
 | Utilities | pdf-lib, nodemailer, zod |
 | Testing | TSX, Playwright |
 | Linting | ESLint 9 |
@@ -69,7 +69,7 @@ npm run dev
 
 Local server: `http://localhost:3000`
 
-Required environment variables: `.env.local` with Anthropic, OpenAI, and Supabase credentials.
+Required environment variables: `.env.local` with Neon, Anclora Identity, and configured AI provider credentials.
 
 ## Supported languages
 

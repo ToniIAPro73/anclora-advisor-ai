@@ -36,8 +36,8 @@ BEGIN
     CREATE POLICY general_alert_reminders_self_policy
       ON public.general_alert_reminders
       FOR ALL
-      USING (user_id = auth.uid())
-      WITH CHECK (user_id = auth.uid());
+      USING (user_id = auth.user_id())
+      WITH CHECK (user_id = auth.user_id());
   END IF;
 END $$;
 

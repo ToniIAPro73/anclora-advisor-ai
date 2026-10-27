@@ -4,7 +4,7 @@
  * Runtime de LLM configurable por perfil (`AI_RUNTIME_PROFILE`)
  */
 
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createNeonServiceClient } from '../../src/lib/neon/server-admin';
 import { generateChatText, getAIRuntimeConfig } from '@/lib/ai/runtime';
 import { retrieveContext, RAGChunk } from '../../src/lib/rag/retrieval';
 import { runDeterministicFiscalTool } from '../../src/lib/tools/deterministic-fiscal-tools';
@@ -227,7 +227,11 @@ export async function retrieveWithCascade(
 // Orchestrator
 // ----------------------------------------------------------------
 export class Orchestrator {
-  private supabase: SupabaseClient;
+  private databaseClient?: ReturnType<typeof createNeonServiceClient>;
+  private get database(): ReturnType<typeof createNeonServiceClient> {
+    this.databaseClient ??= createNeonServiceClient();
+    return this.databaseClient;
+  }
   private llmProviderLabel: string;
   private primaryModel: string;
   private fallbackModel: string;
@@ -245,10 +249,6 @@ export class Orchestrator {
 
   constructor() {
     const aiRuntime = getAIRuntimeConfig();
-    this.supabase  = createClient(
-      process.env.SUPABASE_URL ?? 'https://placeholder.supabase.co',
-      process.env.SUPABASE_SERVICE_ROLE_KEY ?? 'placeholder'
-    );
     this.llmProviderLabel = aiRuntime.chat.label;
     this.primaryModel = aiRuntime.chat.models.primary;
     this.fallbackModel = aiRuntime.chat.models.fallback;
@@ -672,7 +672,7 @@ export class Orchestrator {
       const title = this.buildConversationTitle(query);
       const nowIso = new Date().toISOString();
 
-      const { error: conversationError } = await this.supabase
+      const { error: conversationError } = await this.database
         .from('conversations')
         .upsert({
           id: conversationId,
@@ -685,7 +685,7 @@ export class Orchestrator {
         throw conversationError;
       }
 
-      const { error: messagesError } = await this.supabase.from('messages').insert([
+      const { error: messagesError } = await this.database.from('messages').insert([
         {
           conversation_id: conversationId,
           role: 'user',

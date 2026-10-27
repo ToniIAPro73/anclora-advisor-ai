@@ -124,13 +124,13 @@ export interface GovernanceValidationResult {
 
 export function extractProjectRef(url: string | null | undefined): string | null {
   if (!url) return null;
-  const match = url.match(/https:\/\/([^.]+)\.supabase\.co/i);
+  const match = url.match(/https:\/\/([^.]+)\.database\.co/i);
   return match?.[1] ?? null;
 }
 
 export function validateProjectRefCoherence(): GovernanceValidationResult {
-  const publicRef = extractProjectRef(process.env.NEXT_PUBLIC_SUPABASE_URL);
-  const serverRef = extractProjectRef(process.env.SUPABASE_URL);
+  const publicRef = extractProjectRef(process.env.NEON_DATA_API_URL);
+  const serverRef = extractProjectRef(process.env.NEON_DATA_API_URL);
   const issues: GovernanceValidationIssue[] = [];
 
   if (!publicRef || !serverRef || publicRef !== serverRef || publicRef !== CANONICAL_PROJECT_REF) {

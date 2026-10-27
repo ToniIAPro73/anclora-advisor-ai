@@ -1,4 +1,4 @@
-import { createServiceSupabaseClient } from "@/lib/supabase/server-admin";
+import { createNeonServiceClient } from "@/lib/neon/server-admin";
 import type { AdminIngestRequest, AdminIngestResult } from "@/lib/rag/admin-ingest";
 
 export type AdminJobStatus = "pending" | "running" | "completed" | "failed" | "validated";
@@ -27,8 +27,8 @@ export async function createAdminIngestJob(input: {
   payload: AdminIngestRequest;
   status: AdminJobStatus;
 }): Promise<AdminJobRecord> {
-  const supabase = createServiceSupabaseClient();
-  const { data, error } = await supabase
+  const database = createNeonServiceClient();
+  const { data, error } = await database
     .from("rag_ingest_jobs")
     .insert({
       requested_by: input.requestedBy,
@@ -63,8 +63,8 @@ export async function updateAdminIngestJob(
     error_message: string | null;
   }>
 ): Promise<void> {
-  const supabase = createServiceSupabaseClient();
-  const { error } = await supabase
+  const database = createNeonServiceClient();
+  const { error } = await database
     .from("rag_ingest_jobs")
     .update({
       ...patch,
@@ -95,8 +95,8 @@ export async function failAdminIngestJob(jobId: string, message: string): Promis
 }
 
 export async function listRecentAdminIngestJobs(limit = 8): Promise<AdminJobRecord[]> {
-  const supabase = createServiceSupabaseClient();
-  const { data, error } = await supabase
+  const database = createNeonServiceClient();
+  const { data, error } = await database
     .from("rag_ingest_jobs")
     .select("*")
     .order("created_at", { ascending: false })

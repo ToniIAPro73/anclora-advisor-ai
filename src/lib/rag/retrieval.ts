@@ -1,5 +1,5 @@
-import { SupabaseClient } from '@supabase/supabase-js';
-import { createServiceSupabaseClient } from '@/lib/supabase/server-admin';
+import { NeonPostgrestClient } from '@neondatabase/postgrest-js';
+import { createNeonServiceClient } from '@/lib/neon/server-admin';
 import { TtlCache } from '../cache/memory';
 import { generateEmbedding } from './embeddings';
 
@@ -24,13 +24,13 @@ function resolveCategory(raw?: string): string {
 // ----------------------------------------------------------------
 // Provider-aware database client (server-side only)
 // ----------------------------------------------------------------
-let supabaseClient: SupabaseClient | null = null;
+let neonClient: NeonPostgrestClient | null = null;
 
-export function getRagDatabaseClient(): SupabaseClient {
-  if (!supabaseClient) {
-    supabaseClient = createServiceSupabaseClient();
+export function getRagDatabaseClient(): NeonPostgrestClient {
+  if (!neonClient) {
+    neonClient = createNeonServiceClient();
   }
-  return supabaseClient;
+  return neonClient;
 }
 
 // ----------------------------------------------------------------

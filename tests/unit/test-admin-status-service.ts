@@ -72,7 +72,7 @@ async function main(): Promise<void> {
 
   const queryLog: string[] = [];
 
-  const supabase = {
+  const database = {
     from(table: string) {
       return new FakeResultBuilder(table, queryLog);
     },
@@ -87,7 +87,7 @@ async function main(): Promise<void> {
   };
 
   const payload = await getAdminStatusData({
-    supabase,
+    database,
     filters,
     listRecentJobs: async () => [{ id: "job-1" }],
   });

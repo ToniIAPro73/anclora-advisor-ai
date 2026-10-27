@@ -1,18 +1,13 @@
-import { createClient } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
-import { getSupabaseAnonKey, getSupabaseUrl } from "../../src/lib/env";
-import { createServiceSupabaseClient } from "../../src/lib/supabase/server-admin";
 
-let tempUserId: string | null = null;
-const tempEmail = `playwright_${Date.now()}@anclora.local`;
-const tempPassword = `Pw-${Date.now()}-UI!`;
 const evidenceFixturePath = "tests/fixtures/labor-evidence.txt";
 
 async function login(page: Page): Promise<void> {
+  const cookie = process.env.E2E_SESSION_COOKIE;
+  if (!cookie) throw new Error("Set E2E_SESSION_COOKIE from a dedicated Anclora Identity QA account");
+  const baseUrl = process.env.E2E_BASE_URL ?? "http://127.0.0.1:3000";
+  await page.context().addCookies([{ name: "anclora-advisor-session", value: cookie, url: baseUrl, httpOnly: true, sameSite: "Lax" }]);
   await page.goto("/login");
-  await page.getByLabel("Correo electrónico").fill(tempEmail);
-  await page.locator("#password").fill(tempPassword);
-  await page.getByRole("button", { name: "Entrar al dashboard" }).click();
   await page.waitForURL("**/dashboard/chat", { timeout: 90_000 });
   await expect(page.getByRole("heading", { name: "Workspace Conversacional", exact: true })).toBeVisible();
 }
@@ -37,41 +32,7 @@ async function submitAdminIngest(page: Page, params: {
   await expect(page.getByText(/Ingesta completada:/)).toBeVisible();
 }
 
-test.beforeAll(async () => {
-  const admin = createServiceSupabaseClient();
-  const { data, error } = await admin.auth.admin.createUser({
-    email: tempEmail,
-    password: tempPassword,
-    email_confirm: true,
-  });
-
-  if (error || !data.user) {
-    throw new Error(error?.message ?? "Could not create Playwright test user");
-  }
-
-  tempUserId = data.user.id;
-  await admin.from("users").upsert({
-    id: data.user.id,
-    email: tempEmail,
-    role: "admin",
-    is_active: true,
-  });
-
-  const anon = createClient(getSupabaseUrl(), getSupabaseAnonKey(), {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-  await anon.auth.signOut();
-});
-
-test.afterAll(async () => {
-  if (!tempUserId) {
-    return;
-  }
-  const admin = createServiceSupabaseClient();
-  await admin.auth.admin.deleteUser(tempUserId);
-});
-
-test("login flow and dashboard navigation create a real invoice", async ({ page }) => {
+test("Identity session and dashboard navigation create a real invoice", async ({ page }) => {
   await login(page);
   await navigateFromSidebar(page, /Facturacion/i, "Facturacion");
 
@@ -182,7 +143,7 @@ test("labor UI creates assessment, mitigation and verifies storage evidence flow
   await evidenceLink.click();
   const popup = await popupPromise;
   await popup.waitForLoadState("domcontentloaded");
-  await expect(popup).toHaveURL(/supabase|storage|sign/i);
+  await expect(popup).toHaveURL(/identity|storage|sign/i);
   await popup.close();
 
   const evidenceDeleteButton = mitigationCard.locator(

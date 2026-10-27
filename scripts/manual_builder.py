@@ -886,7 +886,7 @@ def take_screenshots(
                 page.goto(base_url + url, timeout=NAV_TIMEOUT, wait_until="domcontentloaded")
 
                 # Detect auth redirect — session may have expired or been cleared
-                # (e.g. visiting /login can invalidate Supabase tokens in some setups)
+                # (e.g. visiting /login can invalidate Identity sessions in some setups)
                 if shot.get("auth_required", True) and "/login" in page.url:
                     log.warning("  Auth redirect detected for %s — re-authenticating", sid)
                     ensure_auth(page, plan, auth_state, assets_dir)

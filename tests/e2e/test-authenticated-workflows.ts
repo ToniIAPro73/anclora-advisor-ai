@@ -1,6 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
-import { createServiceSupabaseClient } from "../../src/lib/supabase/server-admin";
-import { getSupabaseAnonKey, getSupabaseUrl } from "../../src/lib/env";
+import { SESSION_COOKIE_NAME } from "../../src/lib/auth/constants";
 
 function assert(condition: boolean, label: string): void {
   if (!condition) {
@@ -13,49 +11,14 @@ function getBaseUrl(): string {
   return process.env.E2E_BASE_URL ?? "http://127.0.0.1:3000";
 }
 
-function extractCookieHeader(setCookie: string | null): string {
-  if (!setCookie) {
-    throw new Error("Missing Set-Cookie header from session route");
-  }
-  const [cookiePair] = setCookie.split(";");
-  return cookiePair;
-}
-
 async function main(): Promise<void> {
   console.log("=== Authenticated E2E Check ===");
 
   const baseUrl = getBaseUrl();
-  const tempEmail = `e2e_${Date.now()}@anclora.local`;
-  const tempPassword = `Tmp-${Date.now()}-Pwd!`;
-  const admin = createServiceSupabaseClient();
+  const identityCookie = process.env.E2E_SESSION_COOKIE;
+  if (!identityCookie) throw new Error("Set E2E_SESSION_COOKIE from a dedicated Anclora Identity QA account");
+  const cookieHeader = `${SESSION_COOKIE_NAME}=${identityCookie}`;
 
-  const { data: createdUser, error: createError } = await admin.auth.admin.createUser({
-    email: tempEmail,
-    password: tempPassword,
-    email_confirm: true,
-  });
-
-  if (createError || !createdUser.user) {
-    throw new Error(createError?.message ?? "Could not create E2E user");
-  }
-
-  const anon = createClient(getSupabaseUrl(), getSupabaseAnonKey(), {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-
-  try {
-    const signIn = await anon.auth.signInWithPassword({ email: tempEmail, password: tempPassword });
-    if (signIn.error || !signIn.data.session) {
-      throw new Error(signIn.error?.message ?? "Could not sign in E2E user");
-    }
-
-    const sessionResponse = await fetch(`${baseUrl}/api/auth/session`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ accessToken: signIn.data.session.access_token }),
-    });
-    assert(sessionResponse.ok, "server session route accepts access token");
-    const cookieHeader = extractCookieHeader(sessionResponse.headers.get("set-cookie"));
 
     const dashboardResponse = await fetch(`${baseUrl}/dashboard/chat`, {
       headers: { Cookie: cookieHeader },
@@ -136,9 +99,7 @@ async function main(): Promise<void> {
     assert(conversationResponse.ok && conversationResult.success && Boolean(conversationResult.conversation?.id), "chat conversations endpoint works with authenticated session");
 
     console.log("Authenticated E2E status: PASS");
-  } finally {
-    await admin.auth.admin.deleteUser(createdUser.user.id);
-  }
+
 }
 
 main().catch((error) => {

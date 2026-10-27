@@ -5,7 +5,7 @@ import path from "node:path";
 import { inflateSync } from "node:zlib";
 import type { InvoiceRecord } from "@/lib/invoices/contracts";
 
-export const INVOICE_IMPORTS_BUCKET = process.env.SUPABASE_INVOICE_IMPORTS_BUCKET?.trim() || "invoice-imports";
+export const INVOICE_IMPORTS_BUCKET = process.env.ADVISOR_INVOICE_IMPORTS_BUCKET?.trim() || "invoice-imports";
 const INVOICE_IMPORT_VLM_ENABLED = process.env.INVOICE_IMPORT_VLM_ENABLED?.trim() === "true";
 const ZAI_VISION_MODEL = process.env.ZAI_VISION_MODEL?.trim() || "glm-4.5v";
 

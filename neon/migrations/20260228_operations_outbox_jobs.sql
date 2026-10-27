@@ -32,8 +32,8 @@ BEGIN
     CREATE POLICY app_jobs_self_policy
       ON public.app_jobs
       FOR ALL
-      USING (user_id = auth.uid())
-      WITH CHECK (user_id = auth.uid());
+      USING (user_id = auth.user_id())
+      WITH CHECK (user_id = auth.user_id());
   END IF;
 END $$;
 
@@ -69,7 +69,7 @@ BEGIN
     CREATE POLICY email_outbox_self_policy
       ON public.email_outbox
       FOR ALL
-      USING (user_id = auth.uid())
-      WITH CHECK (user_id = auth.uid());
+      USING (user_id = auth.user_id())
+      WITH CHECK (user_id = auth.user_id());
   END IF;
 END $$;

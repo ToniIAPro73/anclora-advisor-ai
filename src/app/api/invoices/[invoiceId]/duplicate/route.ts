@@ -6,7 +6,7 @@ import { validateAccessToken } from "@/lib/auth/token";
 import type { InvoiceRecord } from "@/lib/invoices/contracts";
 import { getNextInvoiceNumber, INVOICE_SELECT_FIELDS, normalizeInvoiceSeries } from "@/lib/invoices/service";
 import { getRequestId, log } from "@/lib/observability/logger";
-import { createUserScopedSupabaseClient } from "@/lib/supabase/server-user";
+import { createNeonUserClient } from "@/lib/neon/server-user";
 
 type RouteContext = {
   params: Promise<{ invoiceId: string }>;
@@ -35,10 +35,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
   }
 
   const { invoiceId } = await context.params;
-  const supabase = createUserScopedSupabaseClient(auth.accessToken);
+  const database = createNeonUserClient(auth.accessToken);
 
   try {
-    const { data: source, error: sourceError } = await supabase
+    const { data: source, error: sourceError } = await database
       .from("invoices")
       .select(INVOICE_SELECT_FIELDS)
       .eq("id", invoiceId)
@@ -51,9 +51,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const sourceInvoice = source as unknown as InvoiceRecord;
     const issueDate = new Date().toISOString().slice(0, 10);
     const series = normalizeInvoiceSeries(sourceInvoice.series ?? undefined, issueDate);
-    const invoiceNumber = await getNextInvoiceNumber(supabase, auth.userId, series);
+    const invoiceNumber = await getNextInvoiceNumber(database, auth.userId, series);
 
-    const { data: duplicated, error: insertError } = await supabase
+    const { data: duplicated, error: insertError } = await database
       .from("invoices")
       .insert({
         user_id: auth.userId,
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     }
 
     try {
-      await createAuditLog(supabase, {
+      await createAuditLog(database, {
         userId: auth.userId,
         domain: "invoices",
         entityType: "invoice",

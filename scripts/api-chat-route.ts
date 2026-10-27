@@ -9,7 +9,7 @@
  * 1. Recibe consulta del usuario
  * 2. Pasa a Orchestrator
  * 3. Router clasifica → Specialist adecuado
- * 4. Specialist recupera contexto de Supabase
+ * 4. Specialist recupera contexto desde Neon
  * 5. Genera respuesta con citas
  * 6. Retorna al frontend
  */

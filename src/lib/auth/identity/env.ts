@@ -9,12 +9,7 @@ export interface AdvisorIdentityConfig {
 }
 
 export function isAncloraIdentityEnabled(): boolean {
-  const serverEnabled = process.env.ANCLORA_IDENTITY_ENABLED === "true";
-  const publicEnabled = process.env.NEXT_PUBLIC_ANCLORA_IDENTITY_ENABLED === "true";
-  if (serverEnabled !== publicEnabled) {
-    throw new Error("ANCLORA_IDENTITY_ENABLED and NEXT_PUBLIC_ANCLORA_IDENTITY_ENABLED must match");
-  }
-  return serverEnabled;
+  return true;
 }
 
 export function getAdvisorIdentityConfig(): AdvisorIdentityConfig {

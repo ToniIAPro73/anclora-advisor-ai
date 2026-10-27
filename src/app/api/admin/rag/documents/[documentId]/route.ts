@@ -9,7 +9,7 @@ import {
   rollbackDocumentVersion,
 } from "@/lib/rag/admin-document-versions";
 import { getRequestId, log } from "@/lib/observability/logger";
-import { createServiceSupabaseClient } from "@/lib/supabase/server-admin";
+import { createNeonServiceClient } from "@/lib/neon/server-admin";
 
 interface RouteContext {
   params: Promise<{ documentId: string }>;
@@ -82,8 +82,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
       versionId: payload.versionId,
       requestedBy: appUser.id,
     });
-    const supabase = createServiceSupabaseClient();
-    await createAuditLog(supabase, {
+    const database = createNeonServiceClient();
+    await createAuditLog(database, {
       userId: appUser.id,
       domain: "admin_rag",
       entityType: "rag_document",
@@ -133,7 +133,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     return response;
   }
 
-  const supabase = createServiceSupabaseClient();
+  const database = createNeonServiceClient();
   try {
     await createDocumentSnapshot({
       documentId,
@@ -147,7 +147,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       error: snapshotError instanceof Error ? snapshotError.message : "unknown",
     });
   }
-  const { error } = await supabase.from("rag_documents").delete().eq("id", documentId);
+  const { error } = await database.from("rag_documents").delete().eq("id", documentId);
 
   if (error) {
     log("error", "api_admin_rag_document_delete_failed", requestId, {
@@ -167,7 +167,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     documentId,
   });
   try {
-    await createAuditLog(supabase, {
+    await createAuditLog(database, {
       userId: appUser.id,
       domain: "admin_rag",
       entityType: "rag_document",

@@ -1,4 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { NeonPostgrestClient } from "@neondatabase/postgrest-js";
 
 export const INVOICE_SELECT_FIELDS = [
   "id",
@@ -49,11 +49,11 @@ export function normalizeInvoiceSeries(series: string | undefined, issueDate: st
 }
 
 export async function getNextInvoiceNumber(
-  supabase: SupabaseClient,
+  database: NeonPostgrestClient,
   userId: string,
   series: string
 ): Promise<number> {
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("invoices")
     .select("invoice_number")
     .eq("user_id", userId)

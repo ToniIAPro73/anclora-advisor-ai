@@ -13,7 +13,7 @@ function getArg(flag: string): string | null {
 }
 
 function getConnectionString(): string {
-  return process.env.DATABASE_URL || process.env.SUPABASE_DB_URL || "";
+  return process.env.DATABASE_URL || process.env.DATABASE_URL || "";
 }
 
 async function main(): Promise<void> {
@@ -33,7 +33,7 @@ async function main(): Promise<void> {
 
   const connectionString = getConnectionString();
   if (!connectionString) {
-    console.error("Missing DATABASE_URL/SUPABASE_DB_URL.");
+    console.error("Missing DATABASE_URL/DATABASE_URL.");
     process.exit(1);
   }
 

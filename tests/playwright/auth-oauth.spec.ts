@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test.describe("Supabase OAuth contract", () => {
+test.describe("Anclora Identity OIDC contract", () => {
   test("login screen keeps social providers disabled when flags are absent", async ({ page }) => {
     await page.goto("/login");
 

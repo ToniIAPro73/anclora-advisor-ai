@@ -4,7 +4,7 @@ import { SESSION_COOKIE_NAME } from "@/lib/auth/constants";
 import { validateAccessToken } from "@/lib/auth/token";
 import { AUDIT_DOMAIN_VALUES, AUDIT_LOG_SELECT_FIELDS } from "@/lib/audit/logs";
 import { getRequestId, log } from "@/lib/observability/logger";
-import { createUserScopedSupabaseClient } from "@/lib/supabase/server-user";
+import { createNeonUserClient } from "@/lib/neon/server-user";
 
 async function getAuthenticatedContext() {
   const cookieStore = await cookies();
@@ -33,8 +33,8 @@ export async function GET(request: NextRequest) {
 
   const domain = request.nextUrl.searchParams.get("domain");
   const limit = Math.max(1, Math.min(20, Number.parseInt(request.nextUrl.searchParams.get("limit") ?? "8", 10) || 8));
-  const supabase = createUserScopedSupabaseClient(auth.accessToken);
-  let query = supabase
+  const database = createNeonUserClient(auth.accessToken);
+  let query = database
     .from("app_audit_logs")
     .select(AUDIT_LOG_SELECT_FIELDS)
     .order("created_at", { ascending: false })

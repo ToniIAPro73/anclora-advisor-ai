@@ -3,7 +3,7 @@
  * Agent D — Integration test: retrieval, domain routing, citations, no-hallucination
  *
  * Run: npx tsx tests/test-retrieval-d.ts
- * Requires: .env.local in project root (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+ * Requires: .env.local with Neon Data API/JWT configuration.
  */
 
 import * as dotenv from 'dotenv';

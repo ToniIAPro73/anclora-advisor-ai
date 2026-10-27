@@ -15,44 +15,14 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { createClient } from '@supabase/supabase-js';
+import { createNeonServiceClient } from "../src/lib/neon/server-admin";
 import { pipeline } from '@xenova/transformers';
 import * as dotenv from 'dotenv';
 import { chunkStructuredText, normalizeText } from '../src/lib/rag/chunking';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 
-// ─── Env Preflight ────────────────────────────────────────────────────────────
-const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!supabaseUrl || !supabaseKey) {
-  console.error(
-    '❌ PREFLIGHT FAILED: Missing SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY in .env.local'
-  );
-  process.exit(1);
-}
-
-// Validate project_ref coherence
-const publicRef = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').match(
-  /https:\/\/([^.]+)\.supabase\.co/
-)?.[1];
-const serverRef = (process.env.SUPABASE_URL || '').match(
-  /https:\/\/([^.]+)\.supabase\.co/
-)?.[1];
-
-if (publicRef !== serverRef) {
-  console.error(
-    `❌ PREFLIGHT FAILED: ENV_MISMATCH — NEXT_PUBLIC_SUPABASE_URL ref (${publicRef}) !== SUPABASE_URL ref (${serverRef}). NO-GO.`
-  );
-  process.exit(1);
-}
-
-console.log(`✅ PREFLIGHT PASSED — project_ref: ${publicRef}`);
-
-const supabase = createClient(supabaseUrl, supabaseKey);
-
+const database = createNeonServiceClient();
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface PatchSource {
   source_id: string;
@@ -150,7 +120,7 @@ async function run() {
   console.log('   ✅ All sources: placeholder_count = 0');
 
   // ── Step 2: Count pending before ────────────────────────────────────────────
-  const { count: pendingBefore } = await supabase
+  const { count: pendingBefore } = await database
     .from('rag_chunks')
     .select('*', { count: 'exact', head: true })
     .is('embedding', null);
@@ -173,7 +143,7 @@ async function run() {
       console.log(`      char_count: ${src.char_count}`);
 
       // 3a. Upsert document
-      const { data: existingDoc } = await supabase
+      const { data: existingDoc } = await database
         .from('rag_documents')
         .select('id')
         .eq('title', src.title)
@@ -186,7 +156,7 @@ async function run() {
         docId = existingDoc.id;
         console.log(`      💡 Document exists (ID: ${docId.slice(0, 8)}...)`);
       } else {
-        const { data: newDoc, error: insertErr } = await supabase
+        const { data: newDoc, error: insertErr } = await database
           .from('rag_documents')
           .insert({
             title: src.title,
@@ -220,7 +190,7 @@ async function run() {
       updatedDocCount++;
 
       // 3b. Delete existing chunks (full replacement)
-      const { error: deleteErr, count: deletedCount } = await supabase
+      const { error: deleteErr, count: deletedCount } = await database
         .from('rag_chunks')
         .delete({ count: 'exact' })
         .eq('document_id', docId);
@@ -240,7 +210,7 @@ async function run() {
       const chunks = chunkStructuredText(normalized);
       console.log(`      ✨ Generated ${chunks.length} new chunk(s)`);
 
-      const { error: chunkErr } = await supabase.from('rag_chunks').insert(
+      const { error: chunkErr } = await database.from('rag_chunks').insert(
         chunks.map((content) => ({
           document_id: docId,
           content,
@@ -276,7 +246,7 @@ async function run() {
   console.log('   ✅ Pipeline ready.');
 
   // Fetch only pending chunks for patched documents
-  const { data: pendingChunks, error: fetchErr } = await supabase
+  const { data: pendingChunks, error: fetchErr } = await database
     .from('rag_chunks')
     .select('id, content, document_id')
     .in('document_id', patchedDocIds)
@@ -318,7 +288,7 @@ async function run() {
           continue;
         }
 
-        const { error: updateErr } = await supabase
+        const { error: updateErr } = await database
           .from('rag_chunks')
           .update({ embedding })
           .eq('id', chunk.id);
@@ -344,13 +314,13 @@ async function run() {
   console.log('\n🏁 Step 5: Final Validation...');
 
   // pending_after (global)
-  const { count: pendingAfter } = await supabase
+  const { count: pendingAfter } = await database
     .from('rag_chunks')
     .select('*', { count: 'exact', head: true })
     .is('embedding', null);
 
   // bad dims for patched docs
-  const { data: patchedWithEmbeddings } = await supabase
+  const { data: patchedWithEmbeddings } = await database
     .from('rag_chunks')
     .select('id, embedding')
     .in('document_id', patchedDocIds)
@@ -359,7 +329,7 @@ async function run() {
   let badDimValidation = 0;
   if (patchedWithEmbeddings) {
     for (const row of patchedWithEmbeddings) {
-      // Supabase returns vector columns as a JSON string "[0.1, 0.2, ...]"
+      // database returns vector columns as a JSON string "[0.1, 0.2, ...]"
       let emb = row.embedding;
       if (typeof emb === 'string') {
         try { emb = JSON.parse(emb); } catch { emb = null; }
@@ -371,7 +341,7 @@ async function run() {
 
   // placeholder chunks check for patched docs
   let placeholderChunksDetected = 0;
-  const { data: patchedChunks } = await supabase
+  const { data: patchedChunks } = await database
     .from('rag_chunks')
     .select('content')
     .in('document_id', patchedDocIds);
@@ -385,7 +355,7 @@ async function run() {
   }
 
   // updated_count
-  const { count: updatedCount } = await supabase
+  const { count: updatedCount } = await database
     .from('rag_chunks')
     .select('*', { count: 'exact', head: true })
     .in('document_id', patchedDocIds);

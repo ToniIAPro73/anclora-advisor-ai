@@ -16,7 +16,7 @@ import {
   validateProjectRefCoherence,
 } from "@/lib/rag/governance";
 import { getRequestId, log } from "@/lib/observability/logger";
-import { createServiceSupabaseClient } from "@/lib/supabase/server-admin";
+import { createNeonServiceClient } from "@/lib/neon/server-admin";
 
 const sourceSchema = z.object({
   title: z.string().min(5).max(500),
@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
     });
     response.headers.set("x-request-id", requestId);
     try {
-      await createAuditLog(createServiceSupabaseClient(), {
+      await createAuditLog(createNeonServiceClient(), {
         userId: appUser.id,
         domain: "admin_rag",
         entityType: "rag_ingest_job",
@@ -206,7 +206,7 @@ export async function POST(request: NextRequest) {
       replacedDocuments: result.replacedDocuments,
     });
     try {
-      await createAuditLog(createServiceSupabaseClient(), {
+      await createAuditLog(createNeonServiceClient(), {
         userId: appUser.id,
         domain: "admin_rag",
         entityType: "rag_ingest_job",
@@ -237,7 +237,7 @@ export async function POST(request: NextRequest) {
       error: message,
     });
     try {
-      await createAuditLog(createServiceSupabaseClient(), {
+      await createAuditLog(createNeonServiceClient(), {
         userId: appUser.id,
         domain: "admin_rag",
         entityType: "rag_ingest_job",

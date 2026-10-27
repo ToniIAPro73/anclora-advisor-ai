@@ -6,7 +6,7 @@ import { getCurrentAppUserFromCookies } from "@/lib/auth/app-user";
 import { isAdminRole } from "@/lib/auth/roles";
 import { resolveLocale } from "@/lib/i18n/messages";
 import { uiText } from "@/lib/i18n/ui";
-import { createServiceSupabaseClient } from "@/lib/supabase/server-admin";
+import { createNeonServiceClient } from "@/lib/neon/server-admin";
 
 export default async function DashboardAdminPage() {
   const appUser = await getCurrentAppUserFromCookies();
@@ -17,7 +17,7 @@ export default async function DashboardAdminPage() {
 
   const cookieStore = await cookies();
   const locale = resolveLocale(cookieStore.get("anclora.locale")?.value);
-  const supabase = createServiceSupabaseClient();
+  const database = createNeonServiceClient();
 
   const [
     { count: documentCount },
@@ -26,14 +26,14 @@ export default async function DashboardAdminPage() {
     { data: recentAuditLogs },
   ] =
     await Promise.all([
-      supabase.from("rag_documents").select("id", { count: "exact", head: true }),
-      supabase.from("rag_chunks").select("id", { count: "exact", head: true }),
-      supabase
+      database.from("rag_documents").select("id", { count: "exact", head: true }),
+      database.from("rag_chunks").select("id", { count: "exact", head: true }),
+      database
         .from("rag_documents")
         .select("id, title, category, created_at, doc_metadata")
         .order("created_at", { ascending: false })
         .limit(50),
-      supabase
+      database
         .from("app_audit_logs")
         .select("id, user_id, domain, entity_type, entity_id, action, summary, metadata, created_at")
         .eq("domain", "admin_rag")

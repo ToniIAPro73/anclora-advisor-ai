@@ -12,7 +12,7 @@
  */
 
 import Anthropic from "@anthropic-ai/sdk";
-import { createClient } from "@supabase/supabase-js";
+import { createNeonServiceClient } from "../src/lib/neon/server-admin";
 import { z } from "zod";
 
 // ============================================================
@@ -52,14 +52,11 @@ export interface OrchestratorResponse {
 }
 
 // ============================================================
-// SUPABASE CLIENT
+// database CLIENT
 // ============================================================
 
-function getSupabaseClient() {
-  return createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_KEY!
-  );
+function getDatabaseClient() {
+  return createNeonServiceClient();
 }
 
 // ============================================================
@@ -150,11 +147,11 @@ NUNCA:
 // ============================================================
 
 export class FiscalSpecialistTool {
-  private supabase: ReturnType<typeof createClient>;
+  private database: ReturnType<typeof createNeonServiceClient>;
   private client: Anthropic;
 
   constructor() {
-    this.supabase = getSupabaseClient();
+    this.database = getDatabaseClient();
     this.client = new Anthropic({
       apiKey: process.env.ANTHROPIC_API_KEY,
     });
@@ -187,7 +184,7 @@ LIMITACIONES - DECLINA:
 ✗ Redacción de documentos legales
 
 PROTOCOLO:
-1. Usa contexto recuperado de Supabase (normativa Baleares)
+1. Usa contexto recuperado de database (normativa Baleares)
 2. Cita TODAS las fuentes normativas
 3. Incluye plazos específicos con fechas
 4. Proporciona acciones concretas
@@ -242,7 +239,7 @@ TONO: Directo, preciso, sin ambigüedad. Terminología técnica. Cada afirmació
   }
 
   /**
-   * Recupera contexto normativo de Supabase
+   * Recupera contexto normativo de database
    */
   async retrieveContext(query: string): Promise<SpecialistContext> {
     try {
@@ -279,11 +276,11 @@ TONO: Directo, preciso, sin ambigüedad. Terminología técnica. Cada afirmació
 // ============================================================
 
 export class LaborSpecialistTool {
-  private supabase: ReturnType<typeof createClient>;
+  private database: ReturnType<typeof createNeonServiceClient>;
   private client: Anthropic;
 
   constructor() {
-    this.supabase = getSupabaseClient();
+    this.database = getDatabaseClient();
     this.client = new Anthropic({
       apiKey: process.env.ANTHROPIC_API_KEY,
     });
@@ -316,7 +313,7 @@ LIMITACIONES - DECLINA:
 ✗ Redacción formal de contratos
 
 PROTOCOLO:
-1. Recupera contexto de pluriactividad/riesgo de Supabase
+1. Recupera contexto de pluriactividad/riesgo de database
 2. CALCULA PUNTUACIÓN DE RIESGO (0.00-1.00)
 3. Mapea a nivel: LOW/MEDIUM/HIGH/CRITICAL
 4. Identifica cláusulas conflictivas específicas
@@ -376,7 +373,7 @@ TONO: Analítico, basado en riesgo cuantificable. Matriz de decisión. Lenguaje 
   }
 
   /**
-   * Recupera contexto laboral de Supabase
+   * Recupera contexto laboral de database
    */
   async retrieveContext(query: string): Promise<SpecialistContext> {
     try {
@@ -411,11 +408,11 @@ TONO: Analítico, basado en riesgo cuantificable. Matriz de decisión. Lenguaje 
 // ============================================================
 
 export class MarketSpecialistTool {
-  private supabase: ReturnType<typeof createClient>;
+  private database: ReturnType<typeof createNeonServiceClient>;
   private client: Anthropic;
 
   constructor() {
-    this.supabase = getSupabaseClient();
+    this.database = getDatabaseClient();
     this.client = new Anthropic({
       apiKey: process.env.ANTHROPIC_API_KEY,
     });
@@ -448,7 +445,7 @@ LIMITACIONES - DECLINA:
 ✗ Redacción de propuestas formales
 
 PROTOCOLO:
-1. Recupera datos de mercado de Supabase
+1. Recupera datos de mercado de database
 2. Proporciona datos concretos (precios, m², tendencias)
 3. Análisis de comparables si aplica
 4. Proporciona recomendaciones de posicionamiento
@@ -497,7 +494,7 @@ TONO: Analítico, basado en datos. Lenguaje de negocio. Insights accionables.`;
   }
 
   /**
-   * Recupera contexto de mercado de Supabase
+   * Recupera contexto de mercado de database
    */
   async retrieveContext(query: string): Promise<SpecialistContext> {
     try {
@@ -536,14 +533,14 @@ export class Orchestrator {
   private fiscalSpecialist: FiscalSpecialistTool;
   private laborSpecialist: LaborSpecialistTool;
   private marketSpecialist: MarketSpecialistTool;
-  private supabase: ReturnType<typeof createClient>;
+  private database: ReturnType<typeof createNeonServiceClient>;
 
   constructor() {
     this.router = new RouterAgent();
     this.fiscalSpecialist = new FiscalSpecialistTool();
     this.laborSpecialist = new LaborSpecialistTool();
     this.marketSpecialist = new MarketSpecialistTool();
-    this.supabase = getSupabaseClient();
+    this.database = getDatabaseClient();
   }
 
   /**
@@ -717,7 +714,7 @@ export class Orchestrator {
     contexts: SpecialistContext[]
   ): Promise<void> {
     try {
-      await this.supabase.from("messages").insert({
+      await this.database.from("messages").insert({
         conversation_id: conversationId,
         role: "assistant",
         content: response,
@@ -735,7 +732,7 @@ export class Orchestrator {
     message: string
   ): Promise<void> {
     try {
-      await this.supabase.from("fiscal_alerts").insert({
+      await this.database.from("fiscal_alerts").insert({
         user_id: userId,
         alert_type: "critical_issue",
         description: message.substring(0, 500),

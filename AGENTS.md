@@ -25,12 +25,12 @@ No asumir infraestructura compartida entre productos. Validar siempre hosting, b
 # AGENTS.md
 
 ## Objetivo del repositorio
-Anclora Advisor AI es una aplicación web para consultas de asesoría fiscal, laboral y mercado inmobiliario con arquitectura Next.js + TypeScript + Supabase.
+Anclora Advisor AI es una aplicación web para consultas de asesoría fiscal, laboral y mercado inmobiliario con arquitectura Next.js + TypeScript, con Neon PostgreSQL, Anclora Identity y Vercel Blob.
 
 ## Stack actual
 - Next.js 15 + React 19
 - TypeScript
-- Supabase (`@supabase/supabase-js`)
+- Neon PostgreSQL (`@neondatabase/postgrest-js`)
 - API route en `src/app/api/chat/route.ts`
 
 ## Estructura relevante
@@ -38,12 +38,12 @@ Anclora Advisor AI es una aplicación web para consultas de asesoría fiscal, la
 - `src/components/features/`: UI de chat.
 - `src/hooks/`: lógica cliente (`useChat`).
 - `lib/agents/`: orquestador backend.
-- `supabase/migrations/`: esquema SQL.
+- `neon/migrations/`: esquema SQL canónico.
 - `docs/`: arquitectura, análisis y planes.
 - `scripts/`: artefactos de migración/prototipos (no fuente principal de runtime).
 
 ## Convenciones de trabajo
-- Priorizar cambios en `src/`, `lib/` y `supabase/`.
+- Priorizar cambios en `src/`, `lib/` y `neon/`.
 - Mantener tipado estricto y evitar `any`.
 - No exponer secretos en cliente; claves sensibles solo en servidor.
 - Actualizar documentación en `docs/` cuando cambie arquitectura o flujo.
@@ -54,10 +54,11 @@ Anclora Advisor AI es una aplicación web para consultas de asesoría fiscal, la
 - Si una vista necesita desplazamiento, debe ser interno al panel/slot de contenido (ej. chat timeline, tablas).
 - Cualquier cambio de UI que reintroduzca scroll vertical global en dashboard implica `Decision=NO-GO`.
 
-## Supabase canónico por repo
-- Este repo (Anclora Advisor AI) solo usa el `project_ref` `lvpplnqbyvscpuljnzqf`.
-- `jtlnmypcrgmzxeuiffup` pertenece a Anclora Nexus (repo distinto) y no se debe usar aquí.
-- Si una validación detecta mezcla de `project_ref`, estado obligatorio: `ENV_MISMATCH` y `Decision=NO-GO`.
+## Persistencia canónica
+- Base de datos: Neon PostgreSQL.
+- Autenticación: Anclora Identity.
+- Archivos: Vercel Blob.
+- No añadir SDK, configuración ni rutas operativas de proveedores retirados.
 
 ## Gobernanza NotebookLM (obligatoria)
 

@@ -6,7 +6,7 @@ import { validateAccessToken } from "@/lib/auth/token";
 import { updateLaborRiskAssessmentSchema } from "@/lib/labor/assessments";
 import { resolveLocale, t } from "@/lib/i18n/messages";
 import { getRequestId, log } from "@/lib/observability/logger";
-import { createUserScopedSupabaseClient } from "@/lib/supabase/server-user";
+import { createNeonUserClient } from "@/lib/neon/server-user";
 
 async function getAuthenticatedContext() {
   const cookieStore = await cookies();
@@ -61,8 +61,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   if (patch.riskLevel !== undefined) updatePayload.risk_level = patch.riskLevel;
   if (patch.recommendations !== undefined) updatePayload.recommendations = patch.recommendations;
 
-  const supabase = createUserScopedSupabaseClient(auth.accessToken);
-  const { data, error } = await supabase
+  const database = createNeonUserClient(auth.accessToken);
+  const { data, error } = await database
     .from("labor_risk_assessments")
     .update(updatePayload)
     .eq("id", assessmentId)
@@ -83,7 +83,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   response.headers.set("x-request-id", requestId);
   log("info", "api_labor_assessment_patch_succeeded", requestId, { assessmentId });
   try {
-    await createAuditLog(supabase, {
+    await createAuditLog(database, {
       userId: auth.userId,
       domain: "labor",
       entityType: "labor_assessment",
@@ -117,8 +117,8 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
   }
 
   const { assessmentId } = await context.params;
-  const supabase = createUserScopedSupabaseClient(auth.accessToken);
-  const { error } = await supabase.from("labor_risk_assessments").delete().eq("id", assessmentId);
+  const database = createNeonUserClient(auth.accessToken);
+  const { error } = await database.from("labor_risk_assessments").delete().eq("id", assessmentId);
 
   if (error) {
     log("error", "api_labor_assessment_delete_failed", requestId, { assessmentId, error: error.message });
@@ -134,7 +134,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
   response.headers.set("x-request-id", requestId);
   log("info", "api_labor_assessment_delete_succeeded", requestId, { assessmentId });
   try {
-    await createAuditLog(supabase, {
+    await createAuditLog(database, {
       userId: auth.userId,
       domain: "labor",
       entityType: "labor_assessment",

@@ -126,7 +126,7 @@ Repository-specific runtime minima are defined in [`PRODUCTION_RUNTIME.md`](PROD
 | Task Domain | Primary Authority to Read First | Secondary / Operational Sources |
 | :--- | :--- | :--- |
 | **Runtime / Hosting / Env** | [`.anclora/PRODUCTION_RUNTIME.md`](PRODUCTION_RUNTIME.md) | `.env.local` (mode 0600) |
-| **Database / Migrations** | [`.anclora/PRODUCTION_RUNTIME.md`](PRODUCTION_RUNTIME.md) | [`sdd/features/neon-runtime-cutover/`](../sdd/features/neon-runtime-cutover/) and `./supabase/migrations` (legacy history) |
+| **Database / Migrations** | [`.anclora/PRODUCTION_RUNTIME.md`](PRODUCTION_RUNTIME.md) | [`sdd/features/neon-runtime-cutover/`](../sdd/features/neon-runtime-cutover/) and `./neon/migrations` |
 | **AOS Governance** | [`.anclora/AOS_ADOPTION.md`](AOS_ADOPTION.md) | [`../../anclora-governance/`](../../anclora-governance/) |
 | **Design / UI Tokens** | [`../../anclora-design-system/`](../../anclora-design-system/) | [`../../anclora-vault/00-governance/contracts/`](../../anclora-vault/00-governance/contracts/) |
 | **Git Workflow** | [`.anclora/PRODUCTION_RUNTIME.md`](PRODUCTION_RUNTIME.md) | `../AGENTS.md` |

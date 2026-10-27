@@ -11,7 +11,7 @@ import {
   normalizeInvoiceQueryParams,
 } from "@/lib/invoices/service";
 import { getRequestId, log } from "@/lib/observability/logger";
-import { createUserScopedSupabaseClient } from "@/lib/supabase/server-user";
+import { createNeonUserClient } from "@/lib/neon/server-user";
 
 async function getAuthenticatedContext() {
   const cookieStore = await cookies();
@@ -48,9 +48,9 @@ export async function GET(request: NextRequest) {
   });
 
   try {
-    const supabase = createUserScopedSupabaseClient(auth.accessToken);
+    const database = createNeonUserClient(auth.accessToken);
     const query = applyInvoiceFilters(
-      supabase.from("invoices").select(INVOICE_SELECT_FIELDS).order("issue_date", { ascending: false }).limit(filters.limit),
+      database.from("invoices").select(INVOICE_SELECT_FIELDS).order("issue_date", { ascending: false }).limit(filters.limit),
       filters,
       invoiceStatusValues
     );

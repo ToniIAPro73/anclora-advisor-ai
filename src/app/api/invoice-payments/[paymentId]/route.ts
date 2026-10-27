@@ -6,7 +6,7 @@ import { validateAccessToken } from "@/lib/auth/token";
 import type { InvoiceRecord } from "@/lib/invoices/contracts";
 import { INVOICE_SELECT_FIELDS } from "@/lib/invoices/service";
 import { getRequestId, log } from "@/lib/observability/logger";
-import { createUserScopedSupabaseClient } from "@/lib/supabase/server-user";
+import { createNeonUserClient } from "@/lib/neon/server-user";
 
 type RouteContext = {
   params: Promise<{ paymentId: string }>;
@@ -42,8 +42,8 @@ async function recalculateInvoiceStatus(
   accessToken: string,
   invoiceId: string,
 ): Promise<InvoiceRecord> {
-  const supabase = createUserScopedSupabaseClient(accessToken);
-  const { data: invoice, error: invoiceError } = await supabase
+  const database = createNeonUserClient(accessToken);
+  const { data: invoice, error: invoiceError } = await database
     .from("invoices")
     .select(INVOICE_SELECT_FIELDS)
     .eq("id", invoiceId)
@@ -54,7 +54,7 @@ async function recalculateInvoiceStatus(
   }
 
   const invoiceRecord = invoice as unknown as InvoiceRecord;
-  const { data: paymentRows, error: paymentsError } = await supabase
+  const { data: paymentRows, error: paymentsError } = await database
     .from("invoice_payments")
     .select(INVOICE_PAYMENT_SELECT_FIELDS)
     .eq("invoice_id", invoiceId)
@@ -82,7 +82,7 @@ async function recalculateInvoiceStatus(
         ? "paid"
         : "issued";
 
-  const { data: updatedInvoice, error: updateError } = await supabase
+  const { data: updatedInvoice, error: updateError } = await database
     .from("invoices")
     .update({
       status: nextStatus,
@@ -110,8 +110,8 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
   }
 
   const { paymentId } = await context.params;
-  const supabase = createUserScopedSupabaseClient(auth.accessToken);
-  const { data: payment, error: paymentError } = await supabase
+  const database = createNeonUserClient(auth.accessToken);
+  const { data: payment, error: paymentError } = await database
     .from("invoice_payments")
     .select(INVOICE_PAYMENT_SELECT_FIELDS)
     .eq("id", paymentId)
@@ -122,7 +122,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
   }
 
   const invoiceId = (payment as unknown as { invoice_id: string }).invoice_id;
-  const { error: deleteError } = await supabase.from("invoice_payments").delete().eq("id", paymentId);
+  const { error: deleteError } = await database.from("invoice_payments").delete().eq("id", paymentId);
   if (deleteError) {
     log("error", "api_invoice_payment_delete_failed", requestId, { paymentId, error: deleteError.message });
     return NextResponse.json({ success: false, error: deleteError.message }, { status: 500 });
@@ -130,7 +130,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
 
   try {
     const invoice = await recalculateInvoiceStatus(auth.accessToken, invoiceId);
-    await createAuditLog(supabase, {
+    await createAuditLog(database, {
       userId: auth.userId,
       domain: "invoices",
       entityType: "invoice_payment",

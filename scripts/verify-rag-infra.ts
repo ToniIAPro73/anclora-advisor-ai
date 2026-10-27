@@ -5,8 +5,7 @@
  */
 import * as dotenv from 'dotenv';
 import * as path from 'path';
-import { createClient } from '@supabase/supabase-js';
-
+import { createNeonServiceClient } from "../src/lib/neon/server-admin";
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 
 type Check = {
@@ -25,32 +24,24 @@ function parseEmbeddingDim(value: unknown): number {
 }
 
 async function main(): Promise<void> {
-  const url = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
-
-  if (!url || !key) {
-    console.error('Missing SUPABASE_URL/NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY.');
-    process.exit(1);
-  }
-
-  const supabase = createClient(url, key);
+  const database = createNeonServiceClient();
   const checks: Check[] = [];
 
-  const docRes = await supabase.from('rag_documents').select('id', { count: 'exact', head: true });
+  const docRes = await database.from('rag_documents').select('id', { count: 'exact', head: true });
   checks.push({
     name: 'rag_documents table',
     ok: !docRes.error,
     detail: docRes.error ? docRes.error.message : `count=${docRes.count ?? 0}`,
   });
 
-  const chunkRes = await supabase.from('rag_chunks').select('id', { count: 'exact', head: true });
+  const chunkRes = await database.from('rag_chunks').select('id', { count: 'exact', head: true });
   checks.push({
     name: 'rag_chunks table',
     ok: !chunkRes.error,
     detail: chunkRes.error ? chunkRes.error.message : `count=${chunkRes.count ?? 0}`,
   });
 
-  const sampleRes = await supabase
+  const sampleRes = await database
     .from('rag_chunks')
     .select('embedding')
     .not('embedding', 'is', null)
@@ -65,7 +56,7 @@ async function main(): Promise<void> {
   });
 
   const zero = new Array<number>(384).fill(0);
-  const rpcRes = await supabase.rpc('match_chunks', {
+  const rpcRes = await database.rpc('match_chunks', {
     query_embedding: zero,
     match_threshold: 0.0,
     match_count: 1,

@@ -1,4 +1,4 @@
-export const LABOR_EVIDENCE_BUCKET = process.env.SUPABASE_LABOR_EVIDENCE_BUCKET ?? "labor-evidence";
+export const LABOR_EVIDENCE_BUCKET = process.env.ADVISOR_LABOR_EVIDENCE_BUCKET ?? "labor-evidence";
 
 export function sanitizeEvidenceFileName(fileName: string): string {
   return fileName

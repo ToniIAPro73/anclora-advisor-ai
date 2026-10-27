@@ -13,7 +13,7 @@ import {
 } from "@/lib/invoices/service";
 import { resolveLocale, t } from "@/lib/i18n/messages";
 import { getRequestId, log } from "@/lib/observability/logger";
-import { createUserScopedSupabaseClient } from "@/lib/supabase/server-user";
+import { createNeonUserClient } from "@/lib/neon/server-user";
 import { calculateInvoiceTotals } from "@/lib/tools/invoice-calculator";
 
 async function getAuthenticatedContext() {
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     return response;
   }
 
-  const supabase = createUserScopedSupabaseClient(auth.accessToken);
+  const database = createNeonUserClient(auth.accessToken);
   const searchParams = request.nextUrl.searchParams;
   const filters = normalizeInvoiceQueryParams({
     q: searchParams.get("q") ?? undefined,
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
   });
 
   const dbQuery = applyInvoiceFilters(
-    supabase
+    database
     .from("invoices")
     .select(INVOICE_SELECT_FIELDS)
     .order("created_at", { ascending: false })
@@ -110,12 +110,12 @@ export async function POST(request: NextRequest) {
     ivaRate: invoice.ivaRate,
     irpfRetention: invoice.irpfRetention,
   });
-  const supabase = createUserScopedSupabaseClient(auth.accessToken);
+  const database = createNeonUserClient(auth.accessToken);
   const series = normalizeInvoiceSeries(invoice.series, invoice.issueDate);
 
   let invoiceNumber: number;
   try {
-    invoiceNumber = await getNextInvoiceNumber(supabase, auth.userId, series);
+    invoiceNumber = await getNextInvoiceNumber(database, auth.userId, series);
   } catch (sequenceError) {
     log("error", "api_invoices_sequence_failed", requestId, {
       error: sequenceError instanceof Error ? sequenceError.message : "unknown",
@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
     return response;
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("invoices")
     .insert({
       user_id: auth.userId,
@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
     status: invoiceRecord.status,
   });
   try {
-    await createAuditLog(supabase, {
+    await createAuditLog(database, {
       userId: auth.userId,
       domain: "invoices",
       entityType: "invoice",

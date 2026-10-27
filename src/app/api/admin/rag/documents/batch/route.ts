@@ -4,7 +4,7 @@ import { createAuditLog } from "@/lib/audit/logs";
 import { isAdminRole } from "@/lib/auth/roles";
 import { createDocumentSnapshot } from "@/lib/rag/admin-document-versions";
 import { getRequestId, log } from "@/lib/observability/logger";
-import { createServiceSupabaseClient } from "@/lib/supabase/server-admin";
+import { createNeonServiceClient } from "@/lib/neon/server-admin";
 
 type BatchPayload = {
   action?: "bulk_delete";
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     return response;
   }
 
-  const supabase = createServiceSupabaseClient();
+  const database = createNeonServiceClient();
   const deletedDocumentIds: string[] = [];
   const failed: Array<{ documentId: string; error: string }> = [];
 
@@ -56,13 +56,13 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      const { error } = await supabase.from("rag_documents").delete().eq("id", documentId);
+      const { error } = await database.from("rag_documents").delete().eq("id", documentId);
       if (error) {
         throw new Error(error.message);
       }
 
       deletedDocumentIds.push(documentId);
-      await createAuditLog(supabase, {
+      await createAuditLog(database, {
         userId: appUser.id,
         domain: "admin_rag",
         entityType: "rag_document",
