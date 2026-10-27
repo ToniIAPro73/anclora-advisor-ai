@@ -9,13 +9,10 @@ import {
   buildLaborEvidenceDownloadUrl,
   buildLaborEvidencePath,
   extractStoragePathFromEvidenceUrl,
-  LABOR_EVIDENCE_BUCKET,
 } from "@/lib/labor/evidence";
-import {
-  createServiceSupabaseClient,
-  createSupabaseStorageAdminClient,
-} from "@/lib/supabase/server-admin";
+import { createServiceSupabaseClient } from "@/lib/supabase/server-admin";
 import { createUserScopedSupabaseClient } from "@/lib/supabase/server-user";
+import { deletePrivateAsset, getPrivateAsset, putPrivateAsset } from "@/lib/storage/vercel-blob";
 
 type RouteContext = {
   params: Promise<{ actionId: string }>;
@@ -65,13 +62,29 @@ export async function GET(request: NextRequest, context: RouteContext) {
   }
 
   try {
-    await loadUserAction(auth.accessToken, actionId);
-    const storage = createSupabaseStorageAdminClient();
-    const { data, error } = await storage.storage.from(LABOR_EVIDENCE_BUCKET).createSignedUrl(storagePath, 60);
-    if (error || !data?.signedUrl) {
-      throw new Error(error?.message ?? "SIGNED_URL_FAILED");
+    const action = await loadUserAction(auth.accessToken, actionId);
+    const belongsToAction = (action.evidence_links ?? []).some((item) => {
+      const itemPath = item.storagePath ?? extractStoragePathFromEvidenceUrl(item.url);
+      return itemPath === storagePath;
+    });
+    if (!belongsToAction) {
+      return NextResponse.json({ success: false, error: "EVIDENCE_NOT_AVAILABLE" }, { status: 404 });
     }
-    return NextResponse.redirect(data.signedUrl);
+    const asset = await getPrivateAsset(
+      process.env.SUPABASE_LABOR_EVIDENCE_BUCKET?.trim() || "labor-evidence",
+      storagePath,
+    );
+    if (!asset) {
+      return NextResponse.json({ success: false, error: "EVIDENCE_NOT_AVAILABLE" }, { status: 404 });
+    }
+    return new NextResponse(new Uint8Array(asset.body), {
+      headers: {
+        "Content-Type": asset.contentType,
+        ...(asset.contentDisposition ? { "Content-Disposition": asset.contentDisposition } : {}),
+        "Cache-Control": "private, no-store",
+        "X-Content-Type-Options": "nosniff",
+      },
+    });
   } catch (error) {
     log("error", "api_labor_evidence_get_failed", requestId, {
       actionId,
@@ -103,16 +116,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const storagePath = buildLaborEvidencePath(auth.userId, actionId, file.name);
     const arrayBuffer = await file.arrayBuffer();
     const admin = createServiceSupabaseClient();
-    const storage = createSupabaseStorageAdminClient();
-
-    const { error: uploadError } = await storage.storage.from(LABOR_EVIDENCE_BUCKET).upload(storagePath, arrayBuffer, {
-      contentType: file.type || "application/octet-stream",
-      upsert: false,
-    });
-
-    if (uploadError) {
-      throw new Error(uploadError.message);
-    }
+    await putPrivateAsset(
+      process.env.SUPABASE_LABOR_EVIDENCE_BUCKET?.trim() || "labor-evidence",
+      storagePath,
+      Buffer.from(arrayBuffer),
+      file.type || "application/octet-stream",
+    );
 
     const label = typeof labelInput === "string" && labelInput.trim().length > 0 ? labelInput.trim() : file.name;
     const nextEvidenceLinks = [
@@ -141,6 +150,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
       .single();
 
     if (error || !data) {
+      await deletePrivateAsset(
+        process.env.SUPABASE_LABOR_EVIDENCE_BUCKET?.trim() || "labor-evidence",
+        storagePath,
+      ).catch(() => undefined);
       throw new Error(error?.message ?? "EVIDENCE_UPDATE_FAILED");
     }
 
@@ -189,14 +202,18 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     }
 
     const action = await loadUserAction(auth.accessToken, actionId);
-    const nextEvidenceLinks = (action.evidence_links ?? []).filter((item) => {
-      const itemPath = extractStoragePathFromEvidenceUrl(item.url);
-      return itemPath !== storagePath;
-    });
+    const currentEvidenceLinks = action.evidence_links ?? [];
+    const existsOnAction = currentEvidenceLinks.some((item) =>
+      (item.storagePath ?? extractStoragePathFromEvidenceUrl(item.url)) === storagePath,
+    );
+    if (!existsOnAction) {
+      return NextResponse.json({ success: false, error: "EVIDENCE_NOT_AVAILABLE" }, { status: 404 });
+    }
+    const nextEvidenceLinks = currentEvidenceLinks.filter((item) =>
+      (item.storagePath ?? extractStoragePathFromEvidenceUrl(item.url)) !== storagePath,
+    );
 
     const admin = createServiceSupabaseClient();
-    const storage = createSupabaseStorageAdminClient();
-    await storage.storage.from(LABOR_EVIDENCE_BUCKET).remove([storagePath]);
 
     const userScoped = createUserScopedSupabaseClient(auth.accessToken);
     const { data, error } = await userScoped
@@ -212,6 +229,15 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     if (error || !data) {
       throw new Error(error?.message ?? "EVIDENCE_DELETE_FAILED");
     }
+    await deletePrivateAsset(
+      process.env.SUPABASE_LABOR_EVIDENCE_BUCKET?.trim() || "labor-evidence",
+      storagePath,
+    ).catch((error) => {
+      log("error", "api_labor_evidence_blob_delete_failed", requestId, {
+        actionId,
+        error: error instanceof Error ? error.message : "unknown",
+      });
+    });
 
     try {
       await createAuditLog(admin, {

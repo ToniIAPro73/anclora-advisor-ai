@@ -7,7 +7,6 @@ import type { InvoiceRecord } from "@/lib/invoices/contracts";
 import {
   buildInvoiceImportStoragePath,
   getInvoiceImportSource,
-  INVOICE_IMPORTS_BUCKET,
   parseInvoiceDocument,
 } from "@/lib/invoices/imports";
 import { calculateInvoiceTotals } from "@/lib/tools/invoice-calculator";
@@ -18,11 +17,9 @@ import {
 } from "@/lib/invoices/service";
 import { resolveLocale, t } from "@/lib/i18n/messages";
 import { getRequestId, log } from "@/lib/observability/logger";
-import {
-  createServiceSupabaseClient,
-  createSupabaseStorageAdminClient,
-} from "@/lib/supabase/server-admin";
+import { createServiceSupabaseClient } from "@/lib/supabase/server-admin";
 import { createUserScopedSupabaseClient } from "@/lib/supabase/server-user";
+import { deletePrivateAsset, putPrivateAsset } from "@/lib/storage/vercel-blob";
 
 async function getAuthenticatedContext() {
   const cookieStore = await cookies();
@@ -78,15 +75,12 @@ export async function POST(request: NextRequest) {
 
     const storagePath = buildInvoiceImportStoragePath(auth.userId, file.name);
     const admin = createServiceSupabaseClient();
-    const storage = createSupabaseStorageAdminClient();
-    const { error: uploadError } = await storage.storage.from(INVOICE_IMPORTS_BUCKET).upload(storagePath, buffer, {
-      contentType: file.type || "application/octet-stream",
-      upsert: false,
-    });
-
-    if (uploadError) {
-      throw new Error(uploadError.message);
-    }
+    await putPrivateAsset(
+      process.env.SUPABASE_INVOICE_IMPORTS_BUCKET?.trim() || "invoice-imports",
+      storagePath,
+      buffer,
+      file.type || "application/octet-stream",
+    );
 
     const { data, error } = await userScoped
       .from("invoices")
@@ -115,7 +109,10 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error || !data) {
-      await storage.storage.from(INVOICE_IMPORTS_BUCKET).remove([storagePath]);
+      await deletePrivateAsset(
+        process.env.SUPABASE_INVOICE_IMPORTS_BUCKET?.trim() || "invoice-imports",
+        storagePath,
+      ).catch(() => undefined);
       throw new Error(error?.message ?? "INVOICE_IMPORT_INSERT_FAILED");
     }
 

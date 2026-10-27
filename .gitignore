@@ -30,3 +30,4 @@ infra/mcp/notebooklm/package-lock.json
 .vercel
 .claude/
 CLAUDE.md
+.env*
