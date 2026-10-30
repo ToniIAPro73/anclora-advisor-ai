@@ -1,33 +1,25 @@
-# Cutover runtime — Anclora Advisor AI
+# Checklist de validación — adopción AOS canónica (2026-10-30)
 
-**Rama:** `development`
-**Estado del código:** preparado localmente y pendiente de validación del usuario.
-**Runtime objetivo:** Vercel, Neon PostgreSQL/Neon Data API, Anclora Identity y Vercel Blob.
+> Se sobrescribe en cada entrega; el historial queda en Git.
 
-## Implementado en este cambio
+**Repositorio:** anclora-advisor-ai
+**Rama:** development
+**Datos:** no se usaron ni modificaron datos de aplicación.
 
-- La aplicación, sus rutas API y scripts operativos usan Neon.
-- La autenticación de la aplicación usa OIDC y sesiones de Anclora Identity.
-- Los objetos de aplicación se gestionan mediante Vercel Blob.
-- Los scripts SQL viven en `neon/migrations/`; se añadió una migración para actualizar políticas y claims existentes.
-- Se quitaron los clientes y credenciales de proveedores anteriores del runtime y del ejemplo de entorno.
+## 1. Qué cambia
+- Bootstrap mínimo (`AGENTS.md`, adaptadores de proveedor) y contratos `.anclora/` alineados con el modelo AOS ratificado (D-2026-0042): autoridad en Governance, router mínimo, claves Preview heredadas retiradas, semántica de runtime derivada de hechos ya declarados.
+- Copias de contratos sincronizadas desde Vault (11 ficheros).
+- Sin cambios de código de producto, dependencias ni despliegue.
 
-## Validación y límites
+## 2. Ya comprobado por el agente
+| Comprobación | Resultado |
+| --- | --- |
+| `aos-adopt` inspect/plan/apply, diff limitado a ficheros contractuales | PASS |
+| `runtime_semantics.py` sobre `.anclora/PRODUCTION_RUNTIME.md` | PASS |
+| Enlaces a Governance en los `.md` modificados, `git diff --check` | PASS |
 
-- `npm run -s type-check`: pasó tras regenerar los tipos de Next.js y retirar artefactos obsoletos.
-- `npm run -s lint`: pasó.
-- `npm run -s test:smoke`: pasó.
-- `npm run -s test:integration:ops`: pasó.
-- `npm test`: pasó.
-- `npm run -s build`: pasó.
-- Las pruebas UI E2E con sesión real no se ejecutaron porque no están configuradas las credenciales de QA/sesión requeridas en este entorno.
-- No se aplicó ninguna migración remota ni se desplegó el código.
-- Los documentos históricos pueden describir proveedores previos; no son configuración activa. La carpeta de migraciones Supabase y los módulos cliente de Supabase ya no están en el árbol de trabajo.
-- `@supabase/postgrest-js` aparece como dependencia transitiva de `@neondatabase/postgrest-js`, el cliente oficial de Neon Data API compatible con PostgREST. Esto no configura ni establece conexión con Supabase.
+## 3. NOT_RUN
+Tests, lint, typecheck, build y E2E de la aplicación: el diff es solo documentación/configuración contractual.
 
-## Siguiente validación
-
-- Revisar el flujo local de inicio, callback y cierre de sesión de Identity con la cuenta QA dedicada.
-- Validar operaciones de base de datos y archivos contra las integraciones configuradas.
-- Aplicar la migración Neon según el proceso gobernado y comprobar el esquema/políticas antes del despliegue.
-- Validar el build y el deployment de Vercel; mantener cambios sin commit hasta la validación de Toni.
+## 4. Para Toni
+Sin pasos manuales. Bloqueante: no.
